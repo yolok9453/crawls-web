@@ -32,13 +32,48 @@ class PChomeOnsaleCrawler:
         chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
         
         try:
-            # 使用 webdriver-manager 自動管理 ChromeDriver
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+            # 方法1: 使用 webdriver-manager 自動管理 ChromeDriver
+            try:
+                from webdriver_manager.chrome import ChromeDriverManager
+                service = Service(ChromeDriverManager().install())
+                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                logging.info("使用 webdriver-manager 成功設置 WebDriver")
+            except Exception as wdm_error:
+                logging.warning(f"webdriver-manager 失敗: {wdm_error}")
+                
+                # 方法2: 嘗試使用系統路徑中的 chromedriver
+                try:
+                    self.driver = webdriver.Chrome(options=chrome_options)
+                    logging.info("使用系統路徑中的 ChromeDriver 成功設置 WebDriver")
+                except Exception as system_error:
+                    logging.warning(f"系統 ChromeDriver 失敗: {system_error}")
+                    
+                    # 方法3: 嘗試指定常見的 ChromeDriver 路徑
+                    common_paths = [
+                        "chromedriver.exe",
+                        "C:\\chromedriver\\chromedriver.exe",
+                        "C:\\Program Files\\Google\\Chrome\\Application\\chromedriver.exe"
+                    ]
+                    
+                    for path in common_paths:
+                        try:
+                            if os.path.exists(path):
+                                service = Service(path)
+                                self.driver = webdriver.Chrome(service=service, options=chrome_options)
+                                logging.info(f"使用路徑 {path} 成功設置 WebDriver")
+                                break
+                        except Exception:
+                            continue
+                    
+                    if not self.driver:
+                        raise Exception("所有 ChromeDriver 設置方法都失敗")
+            
             self.driver.implicitly_wait(10)
             return True
+            
         except Exception as e:
             logging.error(f"WebDriver 設置失敗: {e}")
+            logging.error("請確保已安裝 Chrome 瀏覽器，或下載 ChromeDriver 並放置在系統路徑中")
             return False
     
     def crawl_onsale_products(self, max_products=None):
