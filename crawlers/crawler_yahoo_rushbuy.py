@@ -107,6 +107,8 @@ def get_products_from_page(driver) -> List[Dict]:
                     price_elem = element.find_element(By.CSS_SELECTOR, '[class*="price"]')
                     import re
                     price_text = price_elem.text
+                    if 'X' in price_text.upper():
+                        continue  # 跳過價格有 X 的商品（未開賣或不明價格）
                     price_match = re.search(r'[\d,]+', price_text.replace(',', ''))
                     price = int(price_match.group().replace(',', '')) if price_match else 0
                 except:
