@@ -28,18 +28,25 @@ jobs:
     
     - name: Install Chrome and ChromeDriver
       run: |
-        # 安裝 Chrome
-        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+        # 更新套件列表
+        sudo apt-get update
+        
+        # 安裝必要的依賴
+        sudo apt-get install -y wget gnupg
+        
+        # 添加 Google Chrome 的 GPG 金鑰和倉庫
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+        
+        # 更新套件列表並安裝 Chrome
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
         
-        # 安裝 ChromeDriver
-        CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-        CHROMEDRIVER_VERSION=$(curl -sS chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION%.*})
-        wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"
-        sudo unzip /tmp/chromedriver.zip -d /usr/local/bin/
-        sudo chmod +x /usr/local/bin/chromedriver
+        # 檢查 Chrome 版本
+        google-chrome --version
+        
+        # 安裝 ChromeDriver (使用 webdriver-manager)
+        pip install webdriver-manager
     
     - name: Run PChome OnSale Crawler
       run: |

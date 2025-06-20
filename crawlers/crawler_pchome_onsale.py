@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from webdriver_manager.chrome import ChromeDriverManager
 import time
 import logging
 import re
@@ -31,7 +32,9 @@ class PChomeOnsaleCrawler:
         chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
         
         try:
-            self.driver = webdriver.Chrome(options=chrome_options)
+            # 使用 webdriver-manager 自動管理 ChromeDriver
+            service = Service(ChromeDriverManager().install())
+            self.driver = webdriver.Chrome(service=service, options=chrome_options)
             self.driver.implicitly_wait(10)
             return True
         except Exception as e:
