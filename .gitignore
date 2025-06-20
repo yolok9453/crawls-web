@@ -99,3 +99,8 @@ chromedriver.log
 # Project specific
 # crawl_data/*.json
 # !crawl_data/.gitkeep
+
+# GitHub Actions automation
+!crawl_data/crawler_results_pchome_onsale*.json
+pchome_onsale_auto.log
+test_automation_*.log

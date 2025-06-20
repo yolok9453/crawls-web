@@ -1,0 +1,342 @@
+{
+  "keyword": "iphone 16",
+  "crawl_time": "2025-06-18T17:15:01.158025",
+  "total_products": 40,
+  "summary": {
+    "total_platforms": 4,
+    "successful_crawlers": 4,
+    "failed_crawlers": 0
+  },
+  "results": {
+    "routn": {
+      "platform": "routn",
+      "keyword": "iphone 16",
+      "total_products": 10,
+      "products": [
+        {
+          "title": "適用蘋果16promax充電器 30W快充iPhone15手機35W 原插頭數據線",
+          "price": 822,
+          "image_url": "https://a.rimg.com.tw/c1/7dc/2d1/fsde1201/4/3f/22522692453439_636_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22522692453439",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "PD45W快充適用蘋果16充電器 iPhone15promax手機40W插頭編織數據線",
+          "price": 423,
+          "image_url": "https://a.rimg.com.tw/c1/7dc/2d1/fsde1201/7/57/22522692478807_384_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22522692478807",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "高檔納帕皮 適用蘋果16pro iphone手機保護殼 iphone16promax潮牌磨砂16硬殼",
+          "price": 349,
+          "image_url": "https://a.rimg.com.tw/g4/7dc/2d1/fsde1201/4/c1/74/22443054813556_200_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22443054813556",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "48h出貨丶潮牌iphone16pro max手機殼荔枝紋插卡15pro斜跨卡包13p/12女款新",
+          "price": 613,
+          "image_url": "https://a.rimg.com.tw/c1/001/a29/88wu/3/4f/22514119290703_560_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22514119290703",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "DD SkinX Pro系列 背透磁吸皮套 適用iPhone16 15-13 pro Max 翻蓋手機皮套 插卡手機殼",
+          "price": 315,
+          "image_url": "https://a.rimg.com.tw/g1/b/75/ef/22317580906991_855_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22317580906991",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "Casetify聯名線條小狗鏡面保護殼適用於iphone16Pro Max 15Plus 14 13 12 11手機殼",
+          "price": 307,
+          "image_url": "https://a.rimg.com.tw/c1/47f/e86/lorettamurphy7878/0/c0/22524859941056_925_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22524859941056",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "小璽35W小管家氮化鎵雙口PD快充頭 蘋果充電器適用iPhone15/16手機",
+          "price": 883,
+          "image_url": "https://a.rimg.com.tw/c1/7dc/2d1/fsde1201/7/7b/22522719709051_346_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22522719709051",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "48h出貨丶適用大猩猩3d隱形懸浮膜iphone16promax鋼化膜15 14 13手機膜",
+          "price": 287,
+          "image_url": "https://a.rimg.com.tw/c1/001/158/666d/8/e6/22514114032870_906_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22514114032870",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "【2.22萬人評價品牌正品】鑽紋防滑 護鏡支架 磁吸充電 手機殼 適用 蘋果 iPhone 16 15 14 13 1",
+          "price": 317,
+          "image_url": "https://a.rimg.com.tw/c1/001/3fb/-33-/3/cf/22520539100111_228_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22520539100111",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "卡斐樂適用蘋果小冰塊30W閃充電器頭 16/12/14快充iPhone15數據線8",
+          "price": 500,
+          "image_url": "https://a.rimg.com.tw/c1/7dc/2d1/fsde1201/c/fe/22522692685054_346_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22522692685054",
+          "platform": "露天拍賣"
+        }
+      ],
+      "crawl_time": "2025-06-18T17:14:44.025703",
+      "execution_time": 0.23324847221374512,
+      "status": "success"
+    },
+    "yahoo": {
+      "platform": "yahoo",
+      "keyword": "iphone 16",
+      "total_products": 10,
+      "products": [
+        {
+          "id": "66a1a7ef-b159-4f0e-89e0-a6af5d557ebb",
+          "title": "(預購) Apple 蘋果 iPhone 16 Pro 256GB 6.3吋智慧型手機",
+          "price": 40400,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/CDC4736C8C-SP-17755176.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/預購-Apple-蘋果-iPhone-16-Pro-256GB-6-3吋智慧型手機-11217140.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "98318885-972d-4d60-b224-2cba93b32a28",
+          "title": "Apple iPhone 16 Pro 128G 6.3吋 手機",
+          "price": 36831,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/738D8061E3-SP-17807301.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/Apple-iPhone-16-Pro-128G-6-3吋-手機-11344979.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "cf0d2dcb-c054-4dcb-9934-9ac6e1de23ea",
+          "title": "【福利品】Apple  iPhone 16 256GB 智慧型手機",
+          "price": 31368,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/355503DC15-SP-18946133.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/福利品-Apple-iPhone-16-256GB-智慧型手機-11483267.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "d09a9ff5-56f6-4e83-998c-ac790cd16ad3",
+          "title": "Apple 蘋果 iPhone 16 128G 6.1吋智慧型手機",
+          "price": 28299,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/793499B408-SP-17752511.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/Apple-蘋果-iPhone-16-128G-6-1吋智慧型手機-11215715.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "dcbdffae-ae71-4a89-8a20-51e8830eb146",
+          "title": "APPLE 蘋果 iPhone 16 256G - 5G智慧型手機",
+          "price": 31388,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/457c7ea956-Gd-11225622.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/APPLE-蘋果-iPhone-16-256G-5G智慧型手機-11225622.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "2bae6d85-f0bb-4ca2-93ff-2526177f88d2",
+          "title": "APPLE 蘋果 iPhone 16 Pro max 256G - 5G智慧型手機",
+          "price": 41999,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/75a554b0fe-Gd-11225613.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/APPLE-蘋果-iPhone-16-Pro-max-256G-5G智慧型手機-11225613.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "ce8c0a8d-8bff-44be-9845-4001e6968b1e",
+          "title": "Apple iPhone 16 Pro Max 512GB -5G智慧型手機",
+          "price": 49388,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/6549395EE4-SP-19333819.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/Apple-iPhone-16-Pro-Max-512GB-5G智慧型手機-11526072.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "ed6f28f2-0f4e-4cda-bdf8-a20d8fbf4177",
+          "title": "(618限定)APPLE 蘋果 iPhone 16 Pro 256G - 5G智慧型手機-沙漠鈦金屬色系",
+          "price": 40400,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/77380782F4-Gd-11612203.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/週末限定-APPLE-蘋果-iPhone-16-Pro-256G-5G智慧型手機-沙漠鈦金屬色系-11612203.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "31bc3fe3-2aa0-4329-9a2d-eb758b73ffe1",
+          "title": "Apple 蘋果 iPhone 16 256G 6.1吋智慧型手機",
+          "price": 31599,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/84F366240B-SP-17752516.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/Apple-蘋果-iPhone-16-256G-6-1吋智慧型手機-11215710.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "addd449b-375b-4bb5-931f-22e5548e0e5a",
+          "title": "【福利品】Apple  iPhone 16 128GB 智慧型手機",
+          "price": 27755,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/355503DC15-SP-18946039.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/福利品-Apple-iPhone-16-128GB-智慧型手機-11483268.html",
+          "platform": "Yahoo購物"
+        }
+      ],
+      "crawl_time": "2025-06-18T17:14:44.293040",
+      "execution_time": 0.4990525245666504,
+      "status": "success"
+    },
+    "pchome": {
+      "platform": "pchome",
+      "keyword": "iphone 16",
+      "total_products": 10,
+      "products": [
+        {
+          "title": "iPhone 16 (128G)",
+          "price": 27799,
+          "image_url": "https://cs-a.ecimg.tw/items/DYAJLW1900HSPR4/000001_1747723405.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DYAJLW-1900HSPR4",
+          "platform": "PChome"
+        },
+        {
+          "title": "iPhone 16 Pro (128G)",
+          "price": 34200,
+          "image_url": "https://cs-a.ecimg.tw/items/DYAJM61900HSPQP/000001_1747733268.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DYAJM6-1900HSPQP",
+          "platform": "PChome"
+        },
+        {
+          "title": "iPhone 16 Plus (256G)",
+          "price": 34099,
+          "image_url": "https://cs-a.ecimg.tw/items/DYAJM21900HSPQN/000001_1739529873.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DYAJM2-1900HSPQN",
+          "platform": "PChome"
+        },
+        {
+          "title": "iPhone 16 Pro (256G)",
+          "price": 38200,
+          "image_url": "https://cs-a.ecimg.tw/items/DYAJM71900IJ9Q6/000001_1749034484.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DYAJM7-1900IJ9Q6",
+          "platform": "PChome"
+        },
+        {
+          "title": "iPhone 16e (128G)",
+          "price": 20900,
+          "image_url": "https://cs-a.ecimg.tw/items/DYAJ8L1900IDJG6/000001_1749810432.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DYAJ8L-1900IDJG6",
+          "platform": "PChome"
+        },
+        {
+          "title": "iPhone 16 (256G)",
+          "price": 31600,
+          "image_url": "https://cs-a.ecimg.tw/items/DYAJLY1900HSPR6/000001_1744077643.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DYAJLY-1900HSPR6",
+          "platform": "PChome"
+        },
+        {
+          "title": "iPhone 16 Plus (128G)",
+          "price": 30699,
+          "image_url": "https://cs-a.ecimg.tw/items/DYAJLZ1900HSPR9/000001_1747738183.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DYAJLZ-1900HSPR9",
+          "platform": "PChome"
+        },
+        {
+          "title": "iPhone 16 Pro Max (256G)",
+          "price": 41999,
+          "image_url": "https://cs-a.ecimg.tw/items/DYAJMC1900IV0JS/000001_1750126414.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DYAJMC-1900IV0JS",
+          "platform": "PChome"
+        },
+        {
+          "title": "iPhone 16 (128G)",
+          "price": 27799,
+          "image_url": "https://cs-a.ecimg.tw/items/DYAJLWA900HSYD3/000001_1743991840.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DYAJLW-A900HSYD3",
+          "platform": "PChome"
+        },
+        {
+          "title": "iPhone 16 Pro Max (256G)",
+          "price": 41999,
+          "image_url": "https://cs-a.ecimg.tw/items/DYAJMC1900HSPRI/000001_1750126458.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DYAJMC-1900HSPRI",
+          "platform": "PChome"
+        }
+      ],
+      "crawl_time": "2025-06-18T17:14:44.742185",
+      "execution_time": 0.9497301578521729,
+      "status": "success"
+    },
+    "carrefour": {
+      "platform": "carrefour",
+      "keyword": "iphone 16",
+      "total_products": 10,
+      "products": [
+        {
+          "title": "APPLE iPhone 16 Pro 512GB 6.3吋 智慧型手機 _ 台灣公司貨 ＋【贈三】",
+          "price": 49490,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dwccf1c65d/images/scm/large/12506378/27819426791_44188301531608_3.jpg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/apple/A260007873901.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "iPhone 16 PRO MAX 256G(沙漠鈦)",
+          "price": 44900,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dw6cc7f08f/images/large/iPhone16-promax-001.jpg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/apple%E8%98%8B%E6%9E%9C/4260188300101.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "APPLE iPhone 16 Pro 256GB 6.3吋 智慧型手機 _ 台灣公司貨 ＋【贈三】",
+          "price": 42490,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dwe7d7da72/images/scm/large/12506378/26119430776_44188301533171_7.jpg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/apple/A260008619101.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "APPLE iPhone 16 Pro 256GB 6.3吋 智慧型手機 _ 台灣公司貨 ＋【贈三】",
+          "price": 42490,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dw7a917103/images/scm/large/12506378/26119430776_44188301533822_8.jpg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/apple/A260008619001.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "iPhone 16 PRO MAX 256G(白鈦色)",
+          "price": 44900,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dwedcfd601/images/large/iPhone16-promax-003.jpg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/apple%E8%98%8B%E6%9E%9C/4260188300301.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "APPLE iPhone 16 ProMax 512GB 6.9吋 智慧型手機 _ 台灣公司貨 ＋【贈三】",
+          "price": 53900,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dw18e9d00a/images/scm/large/12506378/29069473886_44188301530182_7.jpg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/apple/A260008620701.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "iPhone 16 PLUS 256G(白色)",
+          "price": 36400,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dw8550a618/images/large/iPhone16-plus-002.jpg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/apple%E8%98%8B%E6%9E%9C/4260187700201.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "iPhone 16e 256G(白色)",
+          "price": 25400,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dw1ec59d99/images/large/42601974002-P1.jpg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/apple%E8%98%8B%E6%9E%9C/4260197400201.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "iPhone 16 128G(白色)",
+          "price": 29900,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dw246502cb/images/large/iPhone16-002.jpg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/apple%E8%98%8B%E6%9E%9C/4260187300201.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "iPhone 16 256G(湛海藍)",
+          "price": 33400,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dwa43ba927/images/large/iPhone16-005.jpg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/apple%E8%98%8B%E6%9E%9C/4260187400501.html",
+          "platform": "carrefour"
+        }
+      ],
+      "crawl_time": "2025-06-18T17:15:01.157499",
+      "execution_time": 17.36672019958496,
+      "status": "success"
+    }
+  }
+}

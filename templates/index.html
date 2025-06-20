@@ -36,11 +36,9 @@
                             <i class="fas fa-sync-alt me-2"></i>重新整理
                         </button>
                     </div>
-                </div>
-
-                <!-- 統計卡片 -->
+                </div>                <!-- 統計卡片 -->
                 <div class="row mb-4" id="statsCards">
-                    <div class="col-md-3">
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                         <div class="card bg-primary text-white">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
@@ -55,7 +53,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                         <div class="card bg-success text-white">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
@@ -70,7 +68,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                         <div class="card bg-info text-white">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
@@ -85,7 +83,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                         <div class="card bg-warning text-white">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
@@ -95,6 +93,40 @@
                                     </div>
                                     <div class="align-self-center">
                                         <i class="fas fa-clock fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 每日促銷卡片 -->
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div class="card bg-danger text-white daily-deals-card" style="cursor: pointer;" onclick="goToDailyDeals()">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h4 class="card-title" id="dailyDealsCount">-</h4>
+                                        <p class="card-text">每日促銷</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-fire fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 執行新爬蟲卡片 -->
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div class="card bg-secondary text-white" style="cursor: pointer;" onclick="window.location.href='/crawler'">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h4 class="card-title">
+                                            <i class="fas fa-plus"></i>
+                                        </h4>
+                                        <p class="card-text">執行爬蟲</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-play fa-2x"></i>
                                     </div>
                                 </div>
                             </div>

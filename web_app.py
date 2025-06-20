@@ -26,9 +26,13 @@ def index():
 
 @app.route('/api/crawlers')
 def get_crawlers():
-    """獲取可用的爬蟲列表"""
+    """獲取可用的爬蟲列表（排除每日促銷爬蟲）"""
+    all_crawlers = crawler_manager.list_crawlers()
+    # 排除 pchome_onsale，因為這是每日促銷專用的，不讓用戶手動執行
+    available_crawlers = [crawler for crawler in all_crawlers if crawler != 'pchome_onsale']
+    
     return jsonify({
-        'crawlers': crawler_manager.list_crawlers(),
+        'crawlers': available_crawlers,
         'status': 'success'
     })
 
@@ -211,6 +215,71 @@ def view_result(filename):
 def crawler_page():
     """爬蟲執行頁面"""
     return render_template('crawler.html')
+
+@app.route('/api/daily-deals')
+def get_daily_deals():
+    """獲取每日促銷（PCHOME ONSALE）結果"""
+    results_dir = crawler_manager.output_dir
+    daily_deals = []
+    
+    # 先嘗試讀取最新的固定檔案名
+    latest_file = os.path.join(results_dir, "crawler_results_pchome_onsale.json")
+    if os.path.exists(latest_file):
+        json_files = [latest_file]
+    else:
+        # 搜尋所有 PCHOME ONSALE 的 JSON 檔案
+        json_files = glob.glob(os.path.join(results_dir, "*pchome_onsale*.json"))
+    
+    for file_path in json_files:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                
+            # 處理新格式（有 results 結構）或舊格式
+            if 'results' in data and 'pchome_onsale' in data['results']:
+                # 新格式：有 results 結構
+                pchome_result = data['results']['pchome_onsale']
+                file_info = {
+                    'filename': os.path.basename(file_path),
+                    'filepath': file_path,
+                    'keyword': data.get('keyword', 'pchome_onsale'),
+                    'total_products': pchome_result.get('total_products', 0),
+                    'crawl_time': data.get('crawl_time', pchome_result.get('crawl_time', '')),
+                    'file_size': os.path.getsize(file_path),
+                    'platform': 'pchome_onsale',
+                    'products': pchome_result.get('products', [])
+                }
+                daily_deals.append(file_info)
+            elif data.get('platform') == 'pchome_onsale' or 'pchome_onsale' in data.get('keyword', ''):
+                # 舊格式：直接包含產品資料
+                file_info = {
+                    'filename': os.path.basename(file_path),
+                    'filepath': file_path,
+                    'keyword': data.get('keyword', 'pchome_onsale'),
+                    'total_products': data.get('total_products', 0),
+                    'crawl_time': data.get('crawl_time', data.get('timestamp', '')),
+                    'file_size': os.path.getsize(file_path),
+                    'platform': 'pchome_onsale',
+                    'products': data.get('products', [])
+                }
+                daily_deals.append(file_info)
+        except Exception as e:
+            print(f"讀取每日促銷檔案 {file_path} 失敗: {e}")
+    
+    # 按時間排序（最新的在前面）
+    daily_deals.sort(key=lambda x: x['crawl_time'], reverse=True)
+    
+    return jsonify({
+        'daily_deals': daily_deals,
+        'total_deals': sum(deal['total_products'] for deal in daily_deals),
+        'latest_update': daily_deals[0]['crawl_time'] if daily_deals else '',
+        'status': 'success'
+    })
+
+@app.route('/daily-deals')
+def daily_deals_page():
+    """每日促銷專頁"""
+    return render_template('daily_deals.html')
 
 if __name__ == '__main__':
     # 確保templates和static目錄存在

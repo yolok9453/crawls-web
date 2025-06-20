@@ -8,6 +8,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import importlib.util
 import sys
+import glob
 
 class CrawlerManager:
     """爬蟲管理器 - 統一管理所有爬蟲的執行"""
@@ -32,6 +33,22 @@ class CrawlerManager:
         
         # 自動載入爬蟲
         self._load_crawlers()
+    
+    def _cleanup_old_pchome_onsale_files(self):
+        """清理舊的 PCHOME ONSALE 檔案，只保留最新的"""
+        try:
+            pattern = os.path.join(self.output_dir, "crawler_results_pchome_onsale_*.json")
+            old_files = glob.glob(pattern)
+            
+            for file_path in old_files:
+                try:
+                    os.remove(file_path)
+                    print(f"已刪除舊檔案: {file_path}")
+                except Exception as e:
+                    print(f"刪除檔案失敗 {file_path}: {e}")
+                    
+        except Exception as e:
+            print(f"清理舊檔案時發生錯誤: {e}")
     
     def _load_crawlers(self):
         """自動載入crawlers目錄中的所有爬蟲模組"""
@@ -201,8 +218,7 @@ class CrawlerManager:
         total_products = sum(result.get("total_products", 0) for result in results.values())
         
         print(f"所有爬蟲執行完成，總共獲取 {total_products} 個商品，耗時 {total_time:.2f} 秒")
-        
-        # 儲存結果到實例變數
+          # 儲存結果到實例變數
         self.results[keyword] = results
         
         return results
@@ -220,7 +236,16 @@ class CrawlerManager:
         Returns:
             str: 保存的檔案路徑
         """
-        if filename is None:
+        # 檢查是否為 PCHOME ONSALE 每日促銷
+        is_pchome_onsale = (len(results) == 1 and 'pchome_onsale' in results and 
+                           keyword == 'pchome_onsale')
+        
+        if is_pchome_onsale:
+            # PCHOME ONSALE 使用固定檔案名，每次執行都會覆蓋
+            self._cleanup_old_pchome_onsale_files()
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"crawler_results_pchome_onsale_{timestamp}.json"
+        elif filename is None:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"crawler_results_{keyword}_{timestamp}.json"
         

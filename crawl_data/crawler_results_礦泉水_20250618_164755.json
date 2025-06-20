@@ -1,0 +1,342 @@
+{
+  "keyword": "礦泉水",
+  "crawl_time": "2025-06-18T16:47:55.705664",
+  "total_products": 40,
+  "summary": {
+    "total_platforms": 4,
+    "successful_crawlers": 4,
+    "failed_crawlers": 0
+  },
+  "results": {
+    "pchome": {
+      "platform": "pchome",
+      "keyword": "礦泉水",
+      "total_products": 10,
+      "products": [
+        {
+          "title": "礦泉水330ml(24瓶/箱)",
+          "price": 205,
+          "image_url": "https://cs-a.ecimg.tw/items/DBAB2YA9008VCZW/000001_1715063106.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DBAB2Y-A9008VCZW",
+          "platform": "PChome"
+        },
+        {
+          "title": "礦泉水600ml(24瓶/箱)",
+          "price": 249,
+          "image_url": "https://cs-a.ecimg.tw/items/DBAG0JA9008VD7U/000001_1711870676.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DBAG0J-A9008VD7U",
+          "platform": "PChome"
+        },
+        {
+          "title": "富士山礦泉水 500mlx24入",
+          "price": 449,
+          "image_url": "https://cs-a.ecimg.tw/items/DBAG46A900FO9NO/000001_1731051908.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DBAG46-A900FO9NO",
+          "platform": "PChome"
+        },
+        {
+          "title": "礦泉水600ml(24瓶X3箱)",
+          "price": 719,
+          "image_url": "https://cs-a.ecimg.tw/items/DBAG0J1900AKYZE/000001_1716112010.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DBAG0J-1900AKYZE",
+          "platform": "PChome"
+        },
+        {
+          "title": "水事紀麥飯石礦泉水600ml(24入)",
+          "price": 407,
+          "image_url": "https://cs-a.ecimg.tw/items/DBAG2BA9007ZU06/000001_1750060549.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DBAG2B-A9007ZU06",
+          "platform": "PChome"
+        },
+        {
+          "title": "【依雲公司貨】天然礦泉水(330ml/24入)",
+          "price": 940,
+          "image_url": "https://cs-a.ecimg.tw/items/DBAJ04A62321594/000001_1748843554.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DBAJ04-A62321594",
+          "platform": "PChome"
+        },
+        {
+          "title": "海洋鹼性離子水850ml(20瓶/箱)",
+          "price": 420,
+          "image_url": "https://cs-a.ecimg.tw/items/DBAG0LA90096YRY/000001_1747201370.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DBAG0L-A90096YRY",
+          "platform": "PChome"
+        },
+        {
+          "title": "礦泉水1500ml(12入X3箱)",
+          "price": 699,
+          "image_url": "https://cs-a.ecimg.tw/items/DBAG0J1900H4H1M/000001_1735296222.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DBAG0J-1900H4H1M",
+          "platform": "PChome"
+        },
+        {
+          "title": "礦泉水1500ml(12入/箱)",
+          "price": 269,
+          "image_url": "https://cs-a.ecimg.tw/items/DBAG0JA9008VD7H/000001_1712902887.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DBAG0J-A9008VD7H",
+          "platform": "PChome"
+        },
+        {
+          "title": "礦泉水330ml(24瓶X3箱)",
+          "price": 575,
+          "image_url": "https://cs-a.ecimg.tw/items/DBAG0J1900FEK4Q/000001_1738549602.jpg",
+          "url": "https://24h.pchome.com.tw/prod/DBAG0J-1900FEK4Q",
+          "platform": "PChome"
+        }
+      ],
+      "crawl_time": "2025-06-18T16:47:36.890032",
+      "execution_time": 0.08392548561096191,
+      "status": "success"
+    },
+    "routn": {
+      "platform": "routn",
+      "keyword": "礦泉水",
+      "total_products": 10,
+      "products": [
+        {
+          "title": "《悅氏》優質礦泉水(600mlx24)【海洋之心】",
+          "price": 210,
+          "image_url": "https://a.rimg.com.tw/g2/0/c0/06/22304951425030_463_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22304951425030",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "【只送台北新北，十箱出貨】埔里礦泉水 竹炭水 迷你水 迷你瓶 瓶裝水  330ml 24入",
+          "price": 85,
+          "image_url": "https://a.rimg.com.tw/g1/c/6c/2d/22318599137325_582_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22318599137325",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "家加濕器靜音臥室婦嬰兒簡易空調房間車載大容量礦泉水瓶加濕",
+          "price": 237,
+          "image_url": "https://a.rimg.com.tw/c1/b1d/2fd/pakwb167475/a/25/22520549542437_865_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22520549542437",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "《悅氏》優質礦泉水(1500mlx12)【海洋之心】",
+          "price": 210,
+          "image_url": "https://a.rimg.com.tw/g2/4/c8/64/11090210028644_992_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?11090210028644",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "埔里純水 大水1箱65 小水1箱75 飲用水 礦泉水 天然水 瓶裝水 埔里水",
+          "price": 65,
+          "image_url": "https://a.rimg.com.tw/g1/a/70/41/21825233078337_446_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?21825233078337",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "《悅氏》優質礦泉水(600mlx24)【海洋之心】",
+          "price": 210,
+          "image_url": "https://a.rimg.com.tw/g1/1/85/e1/11080803309025_178_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?11080803309025",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "埔里純水 大水1箱65 小水1箱75 飲用水 礦泉水 天然水 瓶裝水 埔里水",
+          "price": 65,
+          "image_url": "https://a.rimg.com.tw/g1/7/49/7b/21825243357563_762_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?21825243357563",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "悅氏礦泉水6000ml/2桶 1桶60元 (1箱125元未稅) 高雄市(任選3箱)屏東市(任選5箱)免運配送到府貨到付款",
+          "price": 125,
+          "image_url": "https://a.rimg.com.tw/g1/0/29/27/22214466944295_217_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22214466944295",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "埔里天然水 1箱340mlX24瓶 特價75元 竹炭水 礦泉水 瓶裝水 埔里水 迷你水 隨手瓶 飲用水",
+          "price": 75,
+          "image_url": "https://a.rimg.com.tw/g1/7/c8/83/21825232904323_716_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?21825232904323",
+          "platform": "露天拍賣"
+        },
+        {
+          "title": "悅氏礦泉水330ml 1箱24入 1瓶8元 (1箱180元未稅)高雄市屏東市(任選3箱免運)直接配送到府貨到付款",
+          "price": 180,
+          "image_url": "https://a.rimg.com.tw/g2/a/82/58/22214466573912_390_m.jpg",
+          "url": "https://www.ruten.com.tw/item/show?22214466573912",
+          "platform": "露天拍賣"
+        }
+      ],
+      "crawl_time": "2025-06-18T16:47:37.072290",
+      "execution_time": 0.26618432998657227,
+      "status": "success"
+    },
+    "yahoo": {
+      "platform": "yahoo",
+      "keyword": "礦泉水",
+      "total_products": 10,
+      "products": [
+        {
+          "id": "ea0066e3-d49d-4ca5-bf5d-16721316cb4a",
+          "title": "悅氏 light鹼性水(550mlx24瓶)",
+          "price": 199,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/CFF9CA073B-Gd-6944598.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/悅氏-light鹼性水-550mlx24瓶--6944598.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "d0cdff7c-6f38-4225-9211-4dd2af69153d",
+          "title": "泰山 純水(600mlx24入)",
+          "price": 249,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/CDBAE6D1B0-Product-1085879.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/-1041246.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "71800d6a-4ca9-41e3-a14d-334e44d48d16",
+          "title": "泰山 純水(1500mlx12入)",
+          "price": 259,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/fa285a45ed-Gd-5067269.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/泰山-純水-1500mlx12入--5067269.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "02d83fc4-8722-4710-b57a-d75934872044",
+          "title": "泰山 純水(5000mlx2入)",
+          "price": 140,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/51e9929e4f-Gd-1041236.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/-1041236.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "f43c595b-0165-43da-8fad-f8ed0834710d",
+          "title": "泰山 Twist Weter環保包裝水(600mlx24入)",
+          "price": 199,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/fba3884d44-Gd-2002496.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/-2002496.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "ef78812e-5710-4289-b0ad-f3f141b3ee2d",
+          "title": "【泰山】純水(600mlx24入)環保無標籤版",
+          "price": 249,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/d92518ee05-Gd-10530688.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/泰山-純水-600mlx24入-環保無標籤版-10530688.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "2b45e55d-e137-49ba-b787-22f576bae31f",
+          "title": "悅氏 light鹼性水(1450mlx12瓶)",
+          "price": 219,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/a7badb0b08-Gd-7936298.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/悅氏-light鹼性水-1450mlx12瓶--7936298.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "cc4f7e9d-91e7-472d-b9aa-9dd6128854e7",
+          "title": "統一 UNI SPARKLING檸檬風味氣泡水 PET(500mlx24入/箱)",
+          "price": 488,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/F6B4784902-Gd-11347635.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/UNI-SPARKLING檸檬風味氣泡水-PET500mlx24入-箱-11347635.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "c04400bc-f886-4893-bc7b-8bb0ba8055b0",
+          "title": "悅氏 天然水(6000mlx2瓶)",
+          "price": 140,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/34574F7DCF-Gd-6648862.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/悅氏-天然水-6000mlx2瓶--6648862.html",
+          "platform": "Yahoo購物"
+        },
+        {
+          "id": "5d8ca60d-510f-430a-b047-f55753783ccb",
+          "title": "泰山 Twist Weter環保包裝水(1460mlx12入)",
+          "price": 199,
+          "image_url": "https://s.yimg.com/zp/MerchandiseImages/7f8ff6e71f-Gd-8921989.jpg",
+          "url": "https://tw.buy.yahoo.com/gdsale/泰山-Twist-Weter環保包裝水-1460mlx12入-8921989.html",
+          "platform": "Yahoo購物"
+        }
+      ],
+      "crawl_time": "2025-06-18T16:47:37.289059",
+      "execution_time": 0.4829525947570801,
+      "status": "success"
+    },
+    "carrefour": {
+      "platform": "carrefour",
+      "keyword": "礦泉水",
+      "total_products": 10,
+      "products": [
+        {
+          "title": "悅氏天然水6000ml",
+          "price": 86,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dw217e3a56/images/large/0003056_6000ml.jpeg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/%E6%82%85%E6%B0%8F/1004002500102.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "悅氏礦泉水 330ml",
+          "price": 154,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dwe0a10f5b/images/large/0218342_-330ml.jpeg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/%E6%82%85%E6%B0%8F/1004003200124.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "悅氏礦泉水600ml",
+          "price": 188,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dwd0433e2a/images/large/0081134_600ml.jpeg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/%E6%82%85%E6%B0%8F/1004000500124.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "悅氏礦泉水1500ml",
+          "price": 167,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dw8ad6d98e/images/large/0133744_1500ml.jpeg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/%E6%82%85%E6%B0%8F/1004000300112.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "家樂福純水 600ml",
+          "price": 120,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dwe73cbd65/images/large/1004006300124.png?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/%E5%AE%B6%E6%A8%82%E7%A6%8F/1004006300124.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "水事紀麥飯石礦泉水5000ml",
+          "price": 98,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dw0fe3ace7/images/large/1004007900102_NR_00.png?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/%E7%B5%B1%E4%B8%80/1004007900102.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "家樂福純水 1500ml",
+          "price": 120,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dwcda2f457/images/large/1004006200112.png?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/%E5%AE%B6%E6%A8%82%E7%A6%8F/1004006200112.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "家樂福純水6000ml",
+          "price": 70,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dwb3f999db/images/large/1004003900102.png?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/%E5%AE%B6%E6%A8%82%E7%A6%8F/1004003900102.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "悅氏天然水2200ml",
+          "price": 166,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dwe59b2192/images/large/0118963_2200ml.jpeg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/%E6%82%85%E6%B0%8F/1004003300108.html",
+          "platform": "carrefour"
+        },
+        {
+          "title": "悅氏礦泉水600ml x6入",
+          "price": 48,
+          "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dw65e64220/images/large/0081135_600ml.jpeg?sw=300&bgcolor=FFFFFF",
+          "url": "https://online.carrefour.com.tw/zh/%E6%82%85%E6%B0%8F/1004000500106.html",
+          "platform": "carrefour"
+        }
+      ],
+      "crawl_time": "2025-06-18T16:47:55.705664",
+      "execution_time": 18.89955759048462,
+      "status": "success"
+    }
+  }
+}

@@ -153,11 +153,16 @@ function renderProducts() {
 
   hideEmptyState();
 
-  // 渲染卡片視圖
-  renderGridView(pageProducts);
-
-  // 渲染列表視圖
-  renderListView(pageProducts);
+  // 根據當前視圖模式只渲染對應的視圖
+  if (document.getElementById("gridView").checked) {
+    // 渲染卡片視圖，清空列表視圖
+    renderGridView(pageProducts);
+    document.getElementById("productsTableBody").innerHTML = "";
+  } else {
+    // 渲染列表視圖，清空卡片視圖
+    renderListView(pageProducts);
+    document.getElementById("productsGrid").innerHTML = "";
+  }
 }
 
 // 渲染卡片視圖
@@ -174,17 +179,24 @@ function renderGridView(products) {
 // 建立商品卡片
 function createProductCard(product) {
   const col = document.createElement("div");
-  col.className = "col-lg-3 col-md-4 col-sm-6 mb-4";
+  // 固定四個卡片一排，不使用響應式
+  col.className = "product-col mb-4";
+  col.style.cssText = `
+    width: 25%;
+    flex: 0 0 25%;
+    max-width: 25%;
+    padding: 0 0.75rem;
+    box-sizing: border-box;
+  `;
 
   const platformClass = `platform-${product.platform
     .toLowerCase()
     .replace(/\s+/g, "")}`;
-
   col.innerHTML = `
         <div class="card product-card h-100">
-            <img src="${product.image_url || "/static/placeholder.jpg"}" 
+            <img src="${product.image_url || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect width='200' height='200' fill='%23f8f9fa'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%236c757d'%3E無圖片%3C/text%3E%3C/svg%3E"}" 
                  class="card-img-top" alt="${product.title}"
-                 onerror="this.src='/static/placeholder.jpg'">
+                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'200\\' height=\\'200\\'%3E%3Crect width=\\'200\\' height=\\'200\\' fill=\\'%23f8f9fa\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' text-anchor=\\'middle\\' dy=\\'.3em\\' fill=\\'%236c757d\\'%3E載入失敗%3C/text%3E%3C/svg%3E'">
             <div class="card-body d-flex flex-column">
                 <h6 class="product-title">${product.title}</h6>
                 <div class="mt-auto">
@@ -205,7 +217,6 @@ function createProductCard(product) {
             </div>
         </div>
     `;
-
   return col;
 }
 
@@ -223,14 +234,13 @@ function renderListView(products) {
 // 建立商品列表行
 function createProductRow(product) {
   const row = document.createElement("tr");
-
   row.innerHTML = `
         <td>
-            <img src="${product.image_url || "/static/placeholder.jpg"}" 
+            <img src="${product.image_url || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Crect width='60' height='60' fill='%23f8f9fa'/%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dy='.3em' fill='%236c757d' font-size='10'%3E無圖%3C/text%3E%3C/svg%3E"}" 
                  class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;"
                  alt="${
                    product.title
-                 }" onerror="this.src='/static/placeholder.jpg'">
+                 }" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'60\\' height=\\'60\\'%3E%3Crect width=\\'60\\' height=\\'60\\' fill=\\'%23f8f9fa\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' text-anchor=\\'middle\\' dy=\\'.3em\\' fill=\\'%236c757d\\' font-size=\\'10\\'%3E載入失敗%3C/text%3E%3C/svg%3E'">
         </td>
         <td>
             <div class="product-title">${product.title}</div>
@@ -400,6 +410,8 @@ function setupEventHandlers() {
     if (this.checked) {
       document.getElementById("productsGrid").style.display = "block";
       document.getElementById("productsList").style.display = "none";
+      // 重新渲染以確保只顯示卡片視圖
+      renderProducts();
     }
   });
 
@@ -407,6 +419,8 @@ function setupEventHandlers() {
     if (this.checked) {
       document.getElementById("productsGrid").style.display = "none";
       document.getElementById("productsList").style.display = "block";
+      // 重新渲染以確保只顯示列表視圖
+      renderProducts();
     }
   });
 

@@ -6,6 +6,7 @@ let filteredResults = [];
 document.addEventListener("DOMContentLoaded", function () {
   loadResults();
   loadPlatforms();
+  loadDailyDealsStats(); // 載入每日促銷統計
 });
 
 // 載入所有結果
@@ -50,6 +51,22 @@ async function loadPlatforms() {
     }
   } catch (error) {
     console.error("載入平台列表失敗:", error);
+  }
+}
+
+// 載入每日促銷統計
+async function loadDailyDealsStats() {
+  try {
+    const response = await fetch("/api/daily-deals");
+    const data = await response.json();
+
+    if (data.status === "success") {
+      document.getElementById("dailyDealsCount").textContent =
+        data.total_deals || 0;
+    }
+  } catch (error) {
+    console.error("載入每日促銷統計失敗:", error);
+    document.getElementById("dailyDealsCount").textContent = "0";
   }
 }
 
@@ -180,6 +197,7 @@ function applyFilters() {
 // 重新整理結果
 function refreshResults() {
   loadResults();
+  loadDailyDealsStats();
 }
 
 // 查看結果詳細
@@ -316,3 +334,12 @@ document.getElementById("searchKeyword").addEventListener("input", function () {
 document
   .getElementById("filterPlatform")
   .addEventListener("change", applyFilters);
+
+// 跳轉到每日促銷頁面
+document
+  .getElementById("dailyDealsPage")
+  .addEventListener("click", goToDailyDeals);
+
+function goToDailyDeals() {
+  window.location.href = "/daily-deals";
+}

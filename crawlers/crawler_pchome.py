@@ -113,7 +113,10 @@ def main(keyword: str, output_file: str = None, max_products: int = 100) -> None
     print(f"結果已保存至 {output_file}")
 
 if __name__ == "__main__":
-    main("球鞋", max_products=10)
+    
+    result =  run("球鞋", max_products=10)
+    with open("pchome_test.json", "w", encoding="utf-8") as f:
+        json.dump(result, f, ensure_ascii=False, indent=2)
     # result = fetch_products("球鞋", max_products=5)
     # with open("pchome_test.json", "w", encoding="utf-8") as f:
     #     json.dump(result, f, ensure_ascii=False, indent=2)
