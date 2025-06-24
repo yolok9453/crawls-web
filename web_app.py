@@ -38,7 +38,7 @@ def get_crawlers():
 
 @app.route('/api/results')
 def get_results():
-    """獲取所有爬蟲結果檔案"""
+    """獲取所有爬蟲結果檔案（排除每日促銷專用檔案）"""
     results_dir = crawler_manager.output_dir
     files = []
     
@@ -46,6 +46,12 @@ def get_results():
     json_files = glob.glob(os.path.join(results_dir, "*.json"))
     
     for file_path in json_files:
+        filename = os.path.basename(file_path)
+        
+        # 排除每日促銷專用檔案
+        if 'pchome_onsale' in filename or 'yahoo_rushbuy' in filename:
+            continue
+            
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -218,21 +224,15 @@ def crawler_page():
 
 @app.route('/api/daily-deals')
 def get_daily_deals():
-    """獲取每日促銷（PCHOME ONSALE）結果"""
+    """獲取每日促銷（PCHOME ONSALE + YAHOO RUSHBUY）結果"""
     results_dir = crawler_manager.output_dir
     daily_deals = []
     
-    # 先嘗試讀取最新的固定檔案名
-    latest_file = os.path.join(results_dir, "crawler_results_pchome_onsale.json")
-    if os.path.exists(latest_file):
-        json_files = [latest_file]
-    else:
-        # 搜尋所有 PCHOME ONSALE 的 JSON 檔案
-        json_files = glob.glob(os.path.join(results_dir, "*pchome_onsale*.json"))
-    
-    for file_path in json_files:
+    # 處理 PCHOME ONSALE 商品
+    pchome_file = os.path.join(results_dir, "crawler_results_pchome_onsale.json")
+    if os.path.exists(pchome_file):
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(pchome_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 
             # 處理新格式（有 results 結構）或舊格式
@@ -240,12 +240,12 @@ def get_daily_deals():
                 # 新格式：有 results 結構
                 pchome_result = data['results']['pchome_onsale']
                 file_info = {
-                    'filename': os.path.basename(file_path),
-                    'filepath': file_path,
+                    'filename': os.path.basename(pchome_file),
+                    'filepath': pchome_file,
                     'keyword': data.get('keyword', 'pchome_onsale'),
                     'total_products': pchome_result.get('total_products', 0),
                     'crawl_time': data.get('crawl_time', pchome_result.get('crawl_time', '')),
-                    'file_size': os.path.getsize(file_path),
+                    'file_size': os.path.getsize(pchome_file),
                     'platform': 'pchome_onsale',
                     'products': pchome_result.get('products', [])
                 }
@@ -253,26 +253,65 @@ def get_daily_deals():
             elif data.get('platform') == 'pchome_onsale' or 'pchome_onsale' in data.get('keyword', ''):
                 # 舊格式：直接包含產品資料
                 file_info = {
-                    'filename': os.path.basename(file_path),
-                    'filepath': file_path,
+                    'filename': os.path.basename(pchome_file),
+                    'filepath': pchome_file,
                     'keyword': data.get('keyword', 'pchome_onsale'),
                     'total_products': data.get('total_products', 0),
                     'crawl_time': data.get('crawl_time', data.get('timestamp', '')),
-                    'file_size': os.path.getsize(file_path),
+                    'file_size': os.path.getsize(pchome_file),
                     'platform': 'pchome_onsale',
                     'products': data.get('products', [])
                 }
                 daily_deals.append(file_info)
         except Exception as e:
-            print(f"讀取每日促銷檔案 {file_path} 失敗: {e}")
+            print(f"讀取 PChome 每日促銷檔案失敗: {e}")
     
-    # 按時間排序（最新的在前面）
-    daily_deals.sort(key=lambda x: x['crawl_time'], reverse=True)
+    # 處理 YAHOO RUSHBUY 商品
+    yahoo_file = os.path.join(results_dir, "crawler_results_yahoo_rushbuy.json")
+    if os.path.exists(yahoo_file):
+        try:
+            with open(yahoo_file, 'r', encoding='utf-8-sig') as f:
+                data = json.load(f)
+                
+            if data.get('platform') == 'yahoo_rushbuy':
+                file_info = {
+                    'filename': os.path.basename(yahoo_file),
+                    'filepath': yahoo_file,
+                    'keyword': data.get('keyword', 'yahoo_rushbuy'),
+                    'total_products': data.get('total_products', 0),
+                    'crawl_time': data.get('crawl_time', data.get('timestamp', '')),
+                    'file_size': os.path.getsize(yahoo_file),
+                    'platform': 'yahoo_rushbuy',
+                    'products': data.get('products', [])
+                }
+                daily_deals.append(file_info)
+        except Exception as e:
+            print(f"讀取 Yahoo 秒殺檔案失敗: {e}")    # 按時間排序（最新的在前面）
+    daily_deals.sort(key=lambda x: x.get('crawl_time', ''), reverse=True)
+    
+    # 支援平台過濾
+    platform_filter = request.args.get('platform', 'all')
+    if platform_filter != 'all':
+        daily_deals = [deal for deal in daily_deals if deal['platform'] == platform_filter]
+    
+    # 取得各平台最後更新時間
+    platform_update_times = {}
+    for deal in daily_deals:
+        platform = deal['platform']
+        if platform not in platform_update_times:
+            platform_update_times[platform] = deal.get('crawl_time', '')
     
     return jsonify({
         'daily_deals': daily_deals,
         'total_deals': sum(deal['total_products'] for deal in daily_deals),
         'latest_update': daily_deals[0]['crawl_time'] if daily_deals else '',
+        'platform_updates': platform_update_times,
+        'next_update_times': {
+            'morning': '08:00',
+            'afternoon': '14:00',
+            'evening': '20:00',
+            'night': '02:00'
+        },
         'status': 'success'
     })
 
@@ -280,6 +319,8 @@ def get_daily_deals():
 def daily_deals_page():
     """每日促銷專頁"""
     return render_template('daily_deals.html')
+
+# 手動更新 API 已移除，使用 GitHub Actions 自動更新
 
 if __name__ == '__main__':
     # 確保templates和static目錄存在

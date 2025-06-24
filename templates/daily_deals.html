@@ -70,12 +70,28 @@
         </div>
     </nav>
 
-    <div class="container mt-4">
-        <!-- 頁面標題 -->        <div class="row mb-4">
-            <div class="col-12">                <div class="d-flex justify-content-between align-items-center">
+    <div class="container mt-4">        <!-- 頁面標題 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h1><i class="fas fa-fire text-danger me-2"></i>每日促銷 - PCHOME 線上購物</h1>
-                        <p class="text-muted mb-0">精選 PCHOME 線上購物每日特價商品</p>
+                        <h1><i class="fas fa-fire text-danger me-2"></i>每日促銷</h1>
+                        <p class="text-muted mb-0" id="platformDescription">精選各大平台每日特價商品</p>
+                    </div>                    <div class="d-flex flex-column gap-1">
+                        <div class="btn-group" role="group" aria-label="平台切換">
+                            <button type="button" class="btn btn-outline-primary active" data-platform="all" onclick="switchPlatform('all')">
+                                <i class="fas fa-list me-1"></i>全部
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" data-platform="pchome_onsale" onclick="switchPlatform('pchome_onsale')">
+                                <i class="fas fa-shopping-cart me-1"></i>PChome
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" data-platform="yahoo_rushbuy" onclick="switchPlatform('yahoo_rushbuy')">
+                                <i class="fas fa-bolt me-1"></i>Yahoo秒殺
+                            </button>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-history me-1"></i>系統每 6 小時自動更新 (02:00, 08:00, 14:00, 20:00)
+                        </small>
                     </div>
                 </div>
             </div>
@@ -109,13 +125,12 @@
                         <p class="mb-0">價格範圍</p>
                     </div>
                 </div>
-            </div>
-            <div class="col-md-3">
+            </div>            <div class="col-md-3">
                 <div class="card stats-card">
                     <div class="card-body text-center">
-                        <i class="fas fa-percentage fa-2x mb-2"></i>
-                        <h6>限時特惠</h6>
-                        <p class="mb-0">天天更新</p>
+                        <i class="fas fa-store fa-2x mb-2"></i>
+                        <h6 id="platformInfo">全部平台</h6>
+                        <p class="mb-0">當前顯示</p>
                     </div>
                 </div>
             </div>
@@ -183,11 +198,10 @@
                 </div>
                 <div class="modal-body" id="productModalBody">
                     <!-- 動態生成內容 -->
-                </div>
-                <div class="modal-footer">
+                </div>                <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
-                    <a href="#" class="btn btn-primary" id="viewOnPchome" target="_blank">
-                        <i class="fas fa-external-link-alt me-2"></i>在 PCHOME 查看
+                    <a href="#" class="btn btn-primary" id="viewOnPlatform" target="_blank">
+                        <i class="fas fa-external-link-alt me-2"></i>在平台查看
                     </a>
                 </div>
             </div>

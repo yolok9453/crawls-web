@@ -1,4 +1,4 @@
-name: Auto Update PChome Daily Deals
+name: Auto Update Daily Deals (PChome + Yahoo)
 
 on:
   schedule:
@@ -44,60 +44,79 @@ jobs:
         
         # 檢查 Chrome 版本
         google-chrome --version
-          # 安裝 ChromeDriver (使用 webdriver-manager)
+        # 安裝 ChromeDriver (使用 webdriver-manager)
         pip install webdriver-manager
     
-    - name: Run PChome OnSale Crawler
+    - name: Run Daily Deals Crawlers (PChome + Yahoo)
       run: |
         python -c "
         import sys, os
         sys.path.append('crawlers')
-        from crawler_pchome_onsale import run
+        from crawler_pchome_onsale import run as run_pchome
+        from crawler_yahoo_rushbuy import run as run_yahoo
         import json
         from datetime import datetime
         import glob
         
         # 清理舊檔案
-        old_files = glob.glob('crawl_data/crawler_results_pchome_onsale*.json')
-        for f in old_files:
+        old_pchome_files = glob.glob('crawl_data/crawler_results_pchome_onsale*.json')
+        old_yahoo_files = glob.glob('crawl_data/crawler_results_yahoo_rushbuy*.json')
+        
+        for f in old_pchome_files + old_yahoo_files:
             try:
                 os.remove(f)
                 print(f'已刪除舊檔案: {f}')
             except: pass
         
-        # 執行爬蟲
-        print('開始執行 PChome OnSale 爬蟲...')
-        products = run(keyword='pchome_onsale', max_products=300)
-        
-        # 保存結果
         os.makedirs('crawl_data', exist_ok=True)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f'crawl_data/crawler_results_pchome_onsale_{timestamp}.json'
+        current_time = datetime.now()
         
-        data = {
-            'keyword': 'pchome_onsale',
-            'crawl_time': datetime.now().isoformat(),
-            'total_products': len(products),
-            'summary': {
-                'total_platforms': 1,
-                'successful_crawlers': 1,
-                'failed_crawlers': 0
-            },
-            'results': {
-                'pchome_onsale': {
-                    'status': 'success',
-                    'total_products': len(products),
-                    'products': products,
-                    'crawl_time': datetime.now().isoformat()
-                }
+        # 執行 PChome OnSale 爬蟲
+        print('開始執行 PChome OnSale 爬蟲...')
+        try:
+            pchome_products = run_pchome(keyword='pchome_onsale', max_products=300)
+            
+            # 保存 PChome 結果（固定檔名）
+            pchome_data = {
+                'timestamp': current_time.isoformat(),
+                'platform': 'pchome_onsale',
+                'keyword': 'pchome_onsale',
+                'total_products': len(pchome_products),
+                'products': pchome_products,
+                'crawl_time': current_time.strftime('%Y-%m-%d %H:%M:%S')
             }
-        }
+            
+            with open('crawl_data/crawler_results_pchome_onsale.json', 'w', encoding='utf-8') as f:
+                json.dump(pchome_data, f, ensure_ascii=False, indent=2)
+            
+            print(f'PChome 爬蟲執行完成！獲取 {len(pchome_products)} 個商品')
+        except Exception as e:
+            print(f'PChome 爬蟲執行失敗: {e}')
+            pchome_products = []
         
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        # 執行 Yahoo 秒殺爬蟲
+        print('開始執行 Yahoo 秒殺爬蟲...')
+        try:
+            yahoo_products = run_yahoo(keyword='yahoo_rushbuy', max_products=200)
+            
+            # 保存 Yahoo 結果（固定檔名）
+            yahoo_data = {
+                'platform': 'yahoo_rushbuy',
+                'keyword': 'yahoo_rushbuy',
+                'total_products': len(yahoo_products),
+                'products': yahoo_products,
+                'crawl_time': current_time.strftime('%Y-%m-%d %H:%M:%S')
+            }
+            
+            with open('crawl_data/crawler_results_yahoo_rushbuy.json', 'w', encoding='utf-8') as f:
+                json.dump(yahoo_data, f, ensure_ascii=False, indent=2)
+            
+            print(f'Yahoo 爬蟲執行完成！獲取 {len(yahoo_products)} 個商品')
+        except Exception as e:
+            print(f'Yahoo 爬蟲執行失敗: {e}')
+            yahoo_products = []
         
-        print(f'爬蟲執行完成！獲取 {len(products)} 個商品')
-        print(f'結果已保存至: {filename}')
+        print(f'全部爬蟲執行完成！PChome: {len(pchome_products)}個, Yahoo: {len(yahoo_products)}個商品')
         "
     
     - name: Configure Git
@@ -107,10 +126,11 @@ jobs:
     
     - name: Commit and push changes
       run: |
-        git add crawl_data/crawler_results_pchome_onsale_*.json
+        git add crawl_data/crawler_results_pchome_onsale.json
+        git add crawl_data/crawler_results_yahoo_rushbuy.json
         if git diff --staged --quiet; then
           echo "No changes to commit"
         else
-          git commit -m "Auto update PChome daily deals - $(date '+%Y-%m-%d %H:%M:%S')"
+          git commit -m "Auto update daily deals (PChome + Yahoo) - $(date '+%Y-%m-%d %H:%M:%S')"
           git push
         fi

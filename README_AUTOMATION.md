@@ -2,12 +2,14 @@
 
 ## 功能說明
 
-本專案使用 GitHub Actions 實現 PChome 每日促銷資料的自動更新功能。
+本專案使用 GitHub Actions 實現每日促銷資料的自動更新功能，包含：
+- **PChome OnSale**: 每日促銷商品
+- **Yahoo 秒殺**: 時時樂限時商品
 
 ### 自動化流程
 
 1. **定時執行**: 每 6 小時自動執行一次（UTC 時間 0, 6, 12, 18 點）
-2. **爬蟲執行**: 自動執行 PChome OnSale 爬蟲
+2. **爬蟲執行**: 同時執行 PChome OnSale 和 Yahoo 秒殺爬蟲
 3. **結果更新**: 將新的促銷資料提交到 GitHub 倉庫
 4. **網站更新**: 前端自動顯示最新的促銷資料
 
@@ -16,10 +18,10 @@
 ```
 .github/
   workflows/
-    update-daily-deals.yml    # GitHub Actions 工作流程
-run_pchome_onsale.py         # 專用執行腳本
+    update-daily-deals.yml           # GitHub Actions 工作流程
 crawl_data/
-  crawler_results_pchome_onsale_*.json  # 爬蟲結果檔案
+  crawler_results_pchome_onsale.json    # PChome 促銷結果（固定檔名）
+  crawler_results_yahoo_rushbuy.json    # Yahoo 秒殺結果（固定檔名）
 ```
 
 ### 手動觸發
@@ -27,7 +29,7 @@ crawl_data/
 除了定時執行外，您也可以手動觸發更新：
 
 1. 進入 GitHub 倉庫的 "Actions" 頁面
-2. 選擇 "Auto Update PChome Daily Deals" 工作流程
+2. 選擇 "Auto Update Daily Deals (PChome + Yahoo)" 工作流程
 3. 點擊 "Run workflow" 按鈕
 
 ### 監控和日誌

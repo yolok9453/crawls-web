@@ -14,6 +14,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 import brotli
 import traceback
+import logging
 
 def get_cookies_and_token() -> tuple:
     """使用 Selenium 獲取必要的 cookies 和 token"""
@@ -107,6 +108,8 @@ def get_products_from_page(driver) -> List[Dict]:
                     price_elem = element.find_element(By.CSS_SELECTOR, '[class*="price"]')
                     import re
                     price_text = price_elem.text
+                    if 'X' in price_text.upper():
+                        continue  # 跳過價格有 X 的商品（未開賣或不明價格）
                     price_match = re.search(r'[\d,]+', price_text.replace(',', ''))
                     price = int(price_match.group().replace(',', '')) if price_match else 0
                 except:
@@ -117,7 +120,7 @@ def get_products_from_page(driver) -> List[Dict]:
                         "price": price,
                         "image_url": image_url,
                         "url": item_url,
-                        "platform": "Yahoo秒殺時時樂"
+                        "platform": "yahoo_rushbuy"
                     })
             except Exception as e:
                 print(f"商品解析失敗: {e}")
@@ -153,66 +156,85 @@ def setup_driver():
     
     
 
-def run(max_products: int = 100) -> List[Dict]:
-    """執行爬蟲"""
-    products = []
-    
+def scroll_to_load_products(driver):
+    """自動滾動頁面以載入所有商品"""
     try:
-        print("正在啟動瀏覽器...")
+        last_height = driver.execute_script("return document.body.scrollHeight")
+        while True:
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2)
+            new_height = driver.execute_script("return document.body.scrollHeight")
+            if new_height == last_height:
+                break
+            last_height = new_height
+        driver.execute_script("window.scrollTo(0, 0);")
+        time.sleep(1)
+    except Exception as e:
+        logging.warning(f"滾動頁面時發生錯誤: {e}")
+
+def run(keyword=None, max_products=100, min_price=0, max_price=999999, save_json=True):
+    """統一介面，支援多參數，並自動存檔"""
+    products = []
+    try:
+        logging.info("正在啟動瀏覽器...")
         driver = setup_driver()
-        
         try:
-            print("正在訪問 Yahoo 秒殺時時樂頁面...")
+            logging.info("正在訪問 Yahoo 秒殺時時樂頁面...")
             driver.get("https://tw.buy.yahoo.com/rushbuy")
-            
-            # 等待頁面加載
             WebDriverWait(driver, 20).until(
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
-            
-            # 從頁面直接提取商品
+            scroll_to_load_products(driver)
             products = get_products_from_page(driver)
-            
-            # 如果沒有找到商品，輸出更多調試資訊
+            # 過濾價格範圍
+            products = [p for p in products if min_price <= p.get('price', 0) <= max_price]
             if not products:
-                print("\n沒有找到商品，正在收集更多資訊...")
-                print("頁面標題:", driver.title)
-                print("頁面 URL:", driver.current_url)
-                print("頁面原始碼片段:", driver.page_source[:500])
-                
+                logging.warning("未找到任何商品")
         finally:
             driver.quit()
-            
     except Exception as e:
-        print(f"發生錯誤: {str(e)}")
-        print("錯誤詳情:", traceback.format_exc())
-    
-    return products[:max_products]
+        logging.error(f"發生錯誤: {str(e)}")
+        logging.error(traceback.format_exc())
+    products = products[:max_products]
+    if save_json and products:
+        save_to_json(products, keyword="yahoo_rushbuy")
+    return products
 
-def main(output_file: str = None, max_products: int = 100) -> None:
-    """主函數"""
-    print("開始爬取Yahoo秒殺時時樂商品:")
-    products = run(max_products)
-    
-    if not products:
-        print("未找到任何商品")
-        return
-        
-    output_data = {
-        "total_products": len(products),
-        "products": products,
-        "crawl_time": time.strftime("%Y-%m-%d %H:%M:%S")
-    }
-    
-    if not output_file:
-        os.makedirs("./crawl_data", exist_ok=True)
-        # 使用時間戳格式，與其他爬蟲保持一致
+def save_to_json(products, keyword="yahoo_rushbuy"):
+    """將商品資料保存到 JSON 文件"""
+    try:
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "crawl_data")
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = f"./crawl_data/crawler_results_yahoo_rushbuy_{timestamp}.json"
-    
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(output_data, f, ensure_ascii=False, indent=2)
-    print(f"結果已保存至 {output_file}")
+        filename = f"crawler_results_{keyword}.json"
+        file_path = os.path.join(data_dir, filename)
+        
+        data_to_save = {
+            "platform": "yahoo_rushbuy",
+            "keyword": keyword,
+            "total_products": len(products),
+            "products": products,
+            "crawl_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data_to_save, f, ensure_ascii=False, indent=2)
+        logging.info(f"成功保存 {len(products)} 個商品到: {file_path}")
+        return file_path
+    except Exception as e:
+        logging.error(f"保存 JSON 文件時發生錯誤: {e}")
+        return None
 
 if __name__ == "__main__":
-    main(max_products=100)
+    logging.basicConfig(level=logging.INFO)
+    products = run(max_products=100, save_json=True)
+    print(f"找到 {len(products)} 個商品:")
+    for i, product in enumerate(products[:5], 1):
+        print(f"{i}. {product['title']}")
+        print(f"   價格: {product['price']}")
+        print(f"   連結: {product['url']}")
+        print(f"   圖片: {product['image_url']}")
+        print()
+    if len(products) > 5:
+        print(f"... 還有 {len(products) - 5} 個商品")
+        print("完整資料已保存到 JSON 文件中")
