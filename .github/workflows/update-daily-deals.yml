@@ -57,16 +57,18 @@ jobs:
         import json
         from datetime import datetime
         import glob
+          # 清理舊檔案（保留固定檔名，刪除所有帶時間戳的檔案）
+        old_pchome_files = glob.glob('crawl_data/crawler_results_pchome_onsale_*.json')
+        old_yahoo_files = glob.glob('crawl_data/crawler_results_yahoo_rushbuy_*.json')
         
-        # 清理舊檔案
-        old_pchome_files = glob.glob('crawl_data/crawler_results_pchome_onsale*.json')
-        old_yahoo_files = glob.glob('crawl_data/crawler_results_yahoo_rushbuy*.json')
-        
-        for f in old_pchome_files + old_yahoo_files:
+        # 清理所有舊的促銷檔案
+        all_old_files = old_pchome_files + old_yahoo_files
+        for f in all_old_files:
             try:
                 os.remove(f)
                 print(f'已刪除舊檔案: {f}')
-            except: pass
+            except Exception as e:
+                print(f'刪除檔案失敗 {f}: {e}')
         
         os.makedirs('crawl_data', exist_ok=True)
         current_time = datetime.now()
