@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-06-25T16:19:46.713053",
+  "platform": "carrefour",
+  "keyword": "i16",
+  "total_products": 2,
+  "products": [
+    {
+      "title": "iPhone 16 128G(黑色)",
+      "price": "29900",
+      "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dwabcdff9a/images/large/iPhone16-001.jpg?sw=300&bgcolor=FFFFFF",
+      "url": "https://online.carrefour.com.tw/zh/apple%E8%98%8B%E6%9E%9C/4260187300101.html",
+      "platform": "carrefour"
+    },
+    {
+      "title": "iPhone 16 128G(黑色)",
+      "price": "29900",
+      "image_url": "https://online.carrefour.com.tw/dw/image/v2/BFHC_PRD/on/demandware.static/-/Sites-carrefour-tw-m-inner/default/dwabcdff9a/images/large/iPhone16-001.jpg?sw=300&bgcolor=FFFFFF",
+      "url": "https://online.carrefour.com.tw/zh/apple%E8%98%8B%E6%9E%9C/4260187300101.html",
+      "platform": "carrefour"
+    }
+  ]
+}

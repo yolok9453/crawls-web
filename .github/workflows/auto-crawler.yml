@@ -1,0 +1,116 @@
+name: 自動化爬蟲與部署
+
+on:
+  schedule:
+    # 每天早上 8:00 執行 (UTC 00:00 = 台灣時間 08:00)
+    - cron: '0 0 * * *'
+    # 每天下午 2:00 執行 (UTC 06:00 = 台灣時間 14:00)  
+    - cron: '0 6 * * *'
+    # 每天晚上 8:00 執行 (UTC 12:00 = 台灣時間 20:00)
+    - cron: '0 12 * * *'
+  
+  # 允許手動觸發
+  workflow_dispatch:
+    inputs:
+      crawlers:
+        description: '要執行的爬蟲 (all, daily-deals, 或特定平台名稱)'
+        required: false
+        default: 'all'
+      max_products:
+        description: '每個平台最大商品數量'
+        required: false
+        default: '50'
+
+jobs:
+  crawl-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 檢出代碼
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 設置 Python 環境
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: 安裝 Chrome 瀏覽器
+      uses: browser-actions/setup-chrome@latest
+      
+    - name: 安裝 ChromeDriver
+      uses: nanasess/setup-chromedriver@master
+      
+    - name: 安裝 Python 依賴
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: 設置 Chrome 選項 (無頭模式)
+      run: |
+        # 建立爬蟲配置檔，設置為無頭模式
+        echo "HEADLESS=true" >> .env
+        echo "GITHUB_ACTIONS=true" >> .env
+        
+    - name: 執行每日促銷爬蟲
+      run: |
+        echo "🚀 開始執行每日促銷爬蟲..."
+        python github_actions_crawler.py --mode daily-deals --max-products ${{ github.event.inputs.max_products || '50' }}
+        
+    - name: 執行一般爬蟲 (如果是完整執行)
+      if: ${{ github.event.inputs.crawlers == 'all' || github.event.inputs.crawlers == '' }}
+      run: |
+        echo "🚀 開始執行一般爬蟲..."
+        python github_actions_crawler.py --mode general --max-products ${{ github.event.inputs.max_products || '30' }}
+          - name: 生成網站資料
+      run: |
+        echo "📊 生成 GitHub Pages 資料..."
+        python generate_github_pages.py
+        
+    - name: 檢查生成的資料
+      run: |
+        echo "🔍 檢查生成的檔案..."
+        ls -la docs/
+        ls -la docs/data/
+        echo "📄 資料檔案大小:"
+        du -sh docs/data/*.json
+        
+    - name: 提交更新的資料
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # 添加所有更新的檔案
+        git add crawl_data/
+        git add docs/
+        git add *.db
+        
+        # 檢查是否有變更
+        if git diff --staged --quiet; then
+          echo "沒有資料變更，跳過提交"
+        else
+          # 提交變更
+          TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+          git commit -m "🤖 自動更新爬蟲資料 - $TIMESTAMP"
+          git push
+        fi
+        
+    - name: 部署到 GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs
+        force_orphan: true
+        
+    - name: 發送通知 (可選)
+      if: failure()
+      run: |
+        echo "❌ 爬蟲執行失敗，請檢查日誌"
+        # 這裡可以添加 Discord/Slack 通知
+        
+    - name: 清理臨時檔案
+      run: |
+        # 清理爬蟲過程中產生的臨時檔案
+        rm -f *.log
+        rm -f debug.log
