@@ -1,0 +1,24 @@
+{
+  "update_time": "2025-06-25T16:37:11.077483",
+  "total_products": 25,
+  "products": [
+    {
+      "title": "Yahoo 秒殺 - iPhone 16 Pro",
+      "price": "$35,900",
+      "price_numeric": 35900,
+      "platform": "yahoo_rushbuy",
+      "image_url": "https://example.com/iphone.jpg",
+      "product_url": "https://tw.buy.yahoo.com/...",
+      "crawl_time": "2025-06-25T16:37:11.077500"
+    },
+    {
+      "title": "PChome 促銷 - MacBook Air",
+      "price": "$29,900",
+      "price_numeric": 29900,
+      "platform": "pchome_onsale",
+      "image_url": "https://example.com/macbook.jpg",
+      "product_url": "https://24h.pchome.com.tw/...",
+      "crawl_time": "2025-06-25T16:37:11.077502"
+    }
+  ]
+}

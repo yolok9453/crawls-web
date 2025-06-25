@@ -1,0 +1,36 @@
+{
+  "timestamp": "2025-06-25T15:25:25.195255",
+  "platform": "yahoo",
+  "keyword": "測試商品",
+  "total_products": 4,
+  "products": [
+    {
+      "title": "輻射檢測儀 手機輻射幾測儀 電場輻射計 電磁輻射測試儀 測試頻電寬 電器輻射檢測儀 ERTB",
+      "price": "347",
+      "image_url": "p0271262662526-item-2f3exf4x0800x0800-m.jpg",
+      "url": "https://tw.buy.yahoo.com/gdsale/gdsale.asp?gdid=p0271262662526",
+      "platform": "yahoo"
+    },
+    {
+      "title": "氧氣檢測報警儀 氧氣偵測器 氣體濃度測試 氣體檢測儀 可燃氣體檢測機 測氧儀 氣體檢測 MET-OD8821",
+      "price": "1945",
+      "image_url": "p0271262660550-item-c59fxf4x0750x0750-m.jpg",
+      "url": "https://tw.buy.yahoo.com/gdsale/gdsale.asp?gdid=p0271262660550",
+      "platform": "yahoo"
+    },
+    {
+      "title": "輻射檢測儀 手機輻射幾測儀 電場輻射計 電磁輻射測試儀 測試頻電寬 電器輻射檢測儀 ERTB",
+      "price": "347",
+      "image_url": "p0271262662526-item-2f3exf4x0800x0800-m.jpg",
+      "url": "https://tw.buy.yahoo.com/gdsale/gdsale.asp?gdid=p0271262662526",
+      "platform": "yahoo"
+    },
+    {
+      "title": "氧氣檢測報警儀 氧氣偵測器 氣體濃度測試 氣體檢測儀 可燃氣體檢測機 測氧儀 氣體檢測 MET-OD8821",
+      "price": "1945",
+      "image_url": "p0271262660550-item-c59fxf4x0750x0750-m.jpg",
+      "url": "https://tw.buy.yahoo.com/gdsale/gdsale.asp?gdid=p0271262660550",
+      "platform": "yahoo"
+    }
+  ]
+}

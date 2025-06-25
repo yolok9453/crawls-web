@@ -1,0 +1,52 @@
+{
+  "update_time": "2025-06-25T16:37:11.081341",
+  "platform": "carrefour",
+  "total_products": 30,
+  "products": [
+    {
+      "title": "CARREFOUR 商品 - 測試商品 1",
+      "price": "$100",
+      "price_numeric": 100,
+      "platform": "carrefour",
+      "image_url": "https://example.com/carrefour_1.jpg",
+      "product_url": "https://carrefour.com/product/1",
+      "crawl_time": "2025-06-25T16:37:11.081357"
+    },
+    {
+      "title": "CARREFOUR 商品 - 測試商品 2",
+      "price": "$200",
+      "price_numeric": 200,
+      "platform": "carrefour",
+      "image_url": "https://example.com/carrefour_2.jpg",
+      "product_url": "https://carrefour.com/product/2",
+      "crawl_time": "2025-06-25T16:37:11.081363"
+    },
+    {
+      "title": "CARREFOUR 商品 - 測試商品 3",
+      "price": "$300",
+      "price_numeric": 300,
+      "platform": "carrefour",
+      "image_url": "https://example.com/carrefour_3.jpg",
+      "product_url": "https://carrefour.com/product/3",
+      "crawl_time": "2025-06-25T16:37:11.081366"
+    },
+    {
+      "title": "CARREFOUR 商品 - 測試商品 4",
+      "price": "$400",
+      "price_numeric": 400,
+      "platform": "carrefour",
+      "image_url": "https://example.com/carrefour_4.jpg",
+      "product_url": "https://carrefour.com/product/4",
+      "crawl_time": "2025-06-25T16:37:11.081369"
+    },
+    {
+      "title": "CARREFOUR 商品 - 測試商品 5",
+      "price": "$500",
+      "price_numeric": 500,
+      "platform": "carrefour",
+      "image_url": "https://example.com/carrefour_5.jpg",
+      "product_url": "https://carrefour.com/product/5",
+      "crawl_time": "2025-06-25T16:37:11.081372"
+    }
+  ]
+}
