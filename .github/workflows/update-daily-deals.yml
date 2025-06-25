@@ -2,8 +2,8 @@ name: Auto Update Daily Deals (PChome + Yahoo)
 
 on:
   schedule:
-    # 每 6 小時執行一次 (UTC 時間: 0, 6, 12, 18 點)
-    - cron: '0 */6 * * *'
+    # 每天三次執行 (UTC 時間: 2:00, 7:00, 13:00 = 台灣時間 10:00, 15:00, 21:00)
+    - cron: '0 2,7,13 * * *'
   workflow_dispatch:  # 允許手動觸發
 
 jobs:
