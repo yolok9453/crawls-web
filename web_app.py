@@ -9,16 +9,7 @@ import json
 import glob
 from datetime import datetime
 from crawler_manager import CrawlerManager
-# 新增商品比較功能所需的 import
-import re
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-try:
-    import google.generativeai as genai
-    GEMINI_AVAILABLE = True
-except ImportError:
-    GEMINI_AVAILABLE = False
-    print("Warning: google-generativeai not installed. Product comparison feature will be disabled.")
+
 
 app = Flask(__name__)
 
@@ -29,149 +20,9 @@ app.template_folder = 'templates'
 # 初始化爬蟲管理器
 crawler_manager = CrawlerManager()
 
-# 配置 Gemini API
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-if GEMINI_AVAILABLE and GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-2.0-flash-exp')
-else:
-    model = None
-    print("Warning: Gemini API key not found. Product comparison feature will be disabled.")
+# 配置應用程式
 
-# 商品比較類
-class ProductComparisonService:
-    def __init__(self, gemini_model=None):
-        self.model = gemini_model
-        self.similarity_threshold = 0.80
-    
-    def compare_products(self, target_product, candidate_products):
-        """使用 Gemini 2.0 Flash 比較商品"""
-        if not self.model:
-            return []
-        
-        # 限制候選商品數量，避免prompt過長
-        max_candidates = 80  # 提升限制到80個商品
-        if len(candidate_products) > max_candidates:
-            print(f"候選商品數量 {len(candidate_products)} 超過限制，僅取前 {max_candidates} 個")
-            candidate_products = candidate_products[:max_candidates]
-        
-        try:
-            prompt = self._create_comparison_prompt(target_product, candidate_products)
-            print(f"=" * 50)
-            print(f"發送給 Gemini 的提示詞長度: {len(prompt)} 字符")
-            print(f"候選商品數量: {len(candidate_products)}")
-            print(f"估計token數量: {len(prompt) // 4}")  # 粗略估計
-            print(f"前100字符預覽: {prompt[:100]}...")
-            print(f"=" * 50)
-            
-            response = self.model.generate_content(prompt)
-            
-            print(f"Gemini 回應長度: {len(response.text)} 字符")
-            print(f"完整回應內容:")
-            print("-" * 30)
-            print(response.text)
-            print("-" * 30)
-            
-            result = self._parse_comparison_result(response.text)
-            print(f"解析後的匹配結果數量: {len(result)}")
-            
-            return result
-        except Exception as e:
-            print(f"商品比較失敗: {e}")
-            return []
-    
-    def _create_comparison_prompt(self, target_product, candidate_products):
-        """創建比較提示詞"""
-        return f"""
-你是一個專業的商品比較分析師。請比較目標商品與候選商品，找出相同或相似的商品。
 
-目標商品：{target_product.get('title', target_product.get('name', ''))} | {target_product.get('platform', '')} | ${target_product.get('price', 0)}
-
-候選商品列表：
-{self._format_candidate_products(candidate_products)}
-
-比較標準：
-- 型號完全相同 → 0.95-1.0
-- 品牌+主要規格相同 → 0.85-0.94  
-- 品牌+功能相同但規格略不同 → 0.75-0.84
-- 同品牌同系列但不同型號 → 0.70-0.79
-
-請回傳JSON格式結果，包含相似度≥0.70的商品：
-
-{{"matches": [{{"index": 數字, "similarity": 0.0-1.0, "reason": "理由", "confidence": "高/中/低", "category": "完全相同/高度相似/部分相似"}}]}}
-
-重要：請仔細檢查每個候選商品，不要遺漏相似商品。"""
-    
-    def _format_candidate_products(self, products):
-        """格式化候選商品列表"""
-        formatted = []
-        total_length = 0
-        max_prompt_length = 15000  # 提升prompt長度限制
-        
-        for i, product in enumerate(products):
-            # 簡化商品信息格式，節省空間
-            product_info = f"""
-{i + 1}. {product.get('title', product.get('name', ''))[:80]} | {product.get('platform', '')} | ${product.get('price', 0)}"""
-            
-            # 檢查是否會超過長度限制
-            if total_length + len(product_info) > max_prompt_length:
-                print(f"達到prompt長度限制，僅格式化前 {i} 個商品")
-                break
-                
-            formatted.append(product_info)
-            total_length += len(product_info)
-        
-        result = ''.join(formatted)
-        print(f"格式化後的候選商品列表長度: {len(result)} 字符")
-        print(f"實際格式化商品數量: {len(formatted)}")
-        
-        return result
-    
-    def _parse_comparison_result(self, response_text):
-        """解析比較結果"""
-        try:
-            # 清理回應文字，移除 markdown 格式和額外說明
-            clean_text = response_text.strip()
-            
-            # 尋找 JSON 內容
-            start_marker = '```json'
-            end_marker = '```'
-            
-            if start_marker in clean_text:
-                start_idx = clean_text.find(start_marker) + len(start_marker)
-                end_idx = clean_text.find(end_marker, start_idx)
-                if end_idx != -1:
-                    clean_text = clean_text[start_idx:end_idx].strip()
-            
-            # 如果沒有找到 markdown 格式，尋找 JSON 對象
-            if not clean_text.startswith('{'):
-                # 尋找第一個 { 和最後一個 }
-                start_brace = clean_text.find('{')
-                end_brace = clean_text.rfind('}')
-                if start_brace != -1 and end_brace != -1 and end_brace > start_brace:
-                    clean_text = clean_text[start_brace:end_brace+1]
-            
-            print(f"最終清理後的 JSON: {clean_text[:200]}...")
-            
-            result = json.loads(clean_text)
-            matches = result.get('matches', [])
-            print(f"JSON 解析成功，找到 {len(matches)} 個匹配結果")
-            
-            # 顯示前幾個匹配結果的詳細信息
-            for i, match in enumerate(matches[:3]):
-                print(f"匹配 {i+1}: 索引={match.get('index')}, 相似度={match.get('similarity')}, 分類={match.get('category')}")
-            
-            return matches
-        except json.JSONDecodeError as e:
-            print(f"JSON 解析失敗: {e}")
-            print(f"原始回應文字: {response_text[:500]}...")
-            return []
-        except Exception as e:
-            print(f"解析比較結果失敗: {e}")
-            return []
-
-# 初始化商品比較服務
-product_comparison_service = ProductComparisonService(model)
 
 @app.route('/')
 def index():
