@@ -1,0 +1,138 @@
+name: Auto Update Daily Deals (PChome + Yahoo)
+
+on:
+  schedule:
+    # 每 6 小時執行一次 (UTC 時間: 0, 6, 12, 18 點)
+    - cron: '0 */6 * * *'
+  workflow_dispatch:  # 允許手動觸發
+
+jobs:
+  update-daily-deals:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Install Chrome and ChromeDriver
+      run: |
+        # 更新套件列表
+        sudo apt-get update
+        
+        # 安裝必要的依賴
+        sudo apt-get install -y wget gnupg
+        
+        # 添加 Google Chrome 的 GPG 金鑰和倉庫
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg
+        echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+        
+        # 更新套件列表並安裝 Chrome
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+        
+        # 檢查 Chrome 版本
+        google-chrome --version
+        # 安裝 ChromeDriver (使用 webdriver-manager)
+        pip install webdriver-manager
+    
+    - name: Run Daily Deals Crawlers (PChome + Yahoo)
+      run: |
+        python -c "
+        import sys, os
+        sys.path.append('crawlers')
+        from crawler_pchome_onsale import run as run_pchome
+        from crawler_yahoo_rushbuy import run as run_yahoo
+        import json
+        from datetime import datetime
+        import glob
+          # 清理舊檔案（保留固定檔名，刪除所有帶時間戳的檔案）
+        old_pchome_files = glob.glob('crawl_data/crawler_results_pchome_onsale_*.json')
+        old_yahoo_files = glob.glob('crawl_data/crawler_results_yahoo_rushbuy_*.json')
+        
+        # 清理所有舊的促銷檔案
+        all_old_files = old_pchome_files + old_yahoo_files
+        for f in all_old_files:
+            try:
+                os.remove(f)
+                print(f'已刪除舊檔案: {f}')
+            except Exception as e:
+                print(f'刪除檔案失敗 {f}: {e}')
+        
+        os.makedirs('crawl_data', exist_ok=True)
+        current_time = datetime.now()
+        
+        # 執行 PChome OnSale 爬蟲
+        print('開始執行 PChome OnSale 爬蟲...')
+        try:
+            pchome_products = run_pchome(keyword='pchome_onsale', max_products=300)
+            
+            # 保存 PChome 結果（固定檔名）
+            pchome_data = {
+                'timestamp': current_time.isoformat(),
+                'platform': 'pchome_onsale',
+                'keyword': 'pchome_onsale',
+                'total_products': len(pchome_products),
+                'products': pchome_products,
+                'crawl_time': current_time.strftime('%Y-%m-%d %H:%M:%S')
+            }
+            
+            with open('crawl_data/crawler_results_pchome_onsale.json', 'w', encoding='utf-8') as f:
+                json.dump(pchome_data, f, ensure_ascii=False, indent=2)
+            
+            print(f'PChome 爬蟲執行完成！獲取 {len(pchome_products)} 個商品')
+        except Exception as e:
+            print(f'PChome 爬蟲執行失敗: {e}')
+            pchome_products = []
+        
+        # 執行 Yahoo 秒殺爬蟲
+        print('開始執行 Yahoo 秒殺爬蟲...')
+        try:
+            yahoo_products = run_yahoo(keyword='yahoo_rushbuy', max_products=200)
+            
+            # 保存 Yahoo 結果（固定檔名）
+            yahoo_data = {
+                'platform': 'yahoo_rushbuy',
+                'keyword': 'yahoo_rushbuy',
+                'total_products': len(yahoo_products),
+                'products': yahoo_products,
+                'crawl_time': current_time.strftime('%Y-%m-%d %H:%M:%S')
+            }
+            
+            with open('crawl_data/crawler_results_yahoo_rushbuy.json', 'w', encoding='utf-8') as f:
+                json.dump(yahoo_data, f, ensure_ascii=False, indent=2)
+            
+            print(f'Yahoo 爬蟲執行完成！獲取 {len(yahoo_products)} 個商品')
+        except Exception as e:
+            print(f'Yahoo 爬蟲執行失敗: {e}')
+            yahoo_products = []
+        
+        print(f'全部爬蟲執行完成！PChome: {len(pchome_products)}個, Yahoo: {len(yahoo_products)}個商品')
+        "
+    
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+    
+    - name: Commit and push changes
+      run: |
+        git add crawl_data/crawler_results_pchome_onsale.json
+        git add crawl_data/crawler_results_yahoo_rushbuy.json
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "Auto update daily deals (PChome + Yahoo) - $(date '+%Y-%m-%d %H:%M:%S')"
+          git push
+        fi

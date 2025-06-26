@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日促銷 - 爬蟲結果展示系統</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <style>
+        .product-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            height: 100%;
+        }
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .product-image {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
+        }
+        .price-tag {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            color: white;
+            font-weight: bold;
+            font-size: 1.2em;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        .deal-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff3333;
+            color: white;
+            padding: 0.3rem 0.6rem;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        .filter-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-spider me-2"></i>爬蟲結果展示系統
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">首頁</a>
+                <a class="nav-link active" href="/daily-deals">每日促銷</a>
+                <a class="nav-link" href="/crawler">執行爬蟲</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">        <!-- 頁面標題 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1><i class="fas fa-fire text-danger me-2"></i>每日促銷</h1>
+                        <p class="text-muted mb-0" id="platformDescription">精選各大平台每日特價商品</p>
+                    </div>                    <div class="d-flex flex-column gap-1">
+                        <div class="btn-group" role="group" aria-label="平台切換">
+                            <button type="button" class="btn btn-outline-primary active" data-platform="all" onclick="switchPlatform('all')">
+                                <i class="fas fa-list me-1"></i>全部
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" data-platform="pchome_onsale" onclick="switchPlatform('pchome_onsale')">
+                                <i class="fas fa-shopping-cart me-1"></i>PChome
+                            </button>
+                            <button type="button" class="btn btn-outline-primary" data-platform="yahoo_rushbuy" onclick="switchPlatform('yahoo_rushbuy')">
+                                <i class="fas fa-bolt me-1"></i>Yahoo秒殺
+                            </button>
+                        </div>
+                        <small class="text-muted">
+                            <i class="fas fa-history me-1"></i>系統每 6 小時自動更新 (00:00, 06:00, 12:00, 18:00)
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 統計資訊 -->
+        <div class="row mb-4" id="dealsStats">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-tags fa-2x mb-2"></i>
+                        <h4 id="totalDeals">-</h4>
+                        <p class="mb-0">促銷商品</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-clock fa-2x mb-2"></i>
+                        <h6 id="lastUpdate">-</h6>
+                        <p class="mb-0">最後更新</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                        <h6 id="priceRange">-</h6>
+                        <p class="mb-0">價格範圍</p>
+                    </div>
+                </div>
+            </div>            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <i class="fas fa-store fa-2x mb-2"></i>
+                        <h6 id="platformInfo">全部平台</h6>
+                        <p class="mb-0">當前顯示</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 篩選和搜尋 -->
+        <div class="filter-section">
+            <div class="row">
+                <div class="col-md-6">
+                    <label for="searchProduct" class="form-label">搜尋商品</label>
+                    <input type="text" class="form-control" id="searchProduct" placeholder="輸入商品名稱...">
+                </div>
+                <div class="col-md-3">
+                    <label for="priceFilter" class="form-label">價格篩選</label>
+                    <select class="form-select" id="priceFilter">
+                        <option value="">全部價格</option>
+                        <option value="0-1000">$1,000 以下</option>
+                        <option value="1000-5000">$1,000 - $5,000</option>
+                        <option value="5000-10000">$5,000 - $10,000</option>
+                        <option value="10000-99999">$10,000 以上</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label>&nbsp;</label>
+                    <button class="btn btn-primary d-block w-100" onclick="applyFilters()">
+                        <i class="fas fa-search me-2"></i>搜尋
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 商品展示區 -->
+        <div id="loadingSpinner" class="text-center" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">載入中...</span>
+            </div>
+        </div>
+
+        <div id="productsContainer" class="row">
+            <!-- 動態生成商品卡片 -->
+        </div>
+
+        <div id="emptyMessage" class="text-center text-muted" style="display: none;">
+            <i class="fas fa-shopping-bag fa-3x mb-3"></i>
+            <h4>目前沒有促銷商品</h4>
+            <p>請稍後再查看或重新整理頁面</p>
+            <button class="btn btn-primary" onclick="refreshDeals()">重新整理</button>
+        </div>
+
+        <!-- 分頁 -->
+        <nav aria-label="商品分頁" class="mt-4">
+            <ul class="pagination justify-content-center" id="pagination">
+                <!-- 動態生成分頁 -->
+            </ul>
+        </nav>
+    </div>
+
+    <!-- 商品詳情模態框 -->
+    <div class="modal fade" id="productModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productModalTitle">商品詳情</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="productModalBody">
+                    <!-- 動態生成內容 -->
+                </div>                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">關閉</button>
+                    <a href="#" class="btn btn-primary" id="viewOnPlatform" target="_blank">
+                        <i class="fas fa-external-link-alt me-2"></i>在平台查看
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='daily_deals.js') }}"></script>
+</body>
+
+</html>
