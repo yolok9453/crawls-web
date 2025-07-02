@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圖片載入測試</title>
+    <style>
+        .test-container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .test-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            transition: opacity 0.3s ease;
+            background-color: #f8f9fa;
+            opacity: 0;
+        }
+        .test-content {
+            padding: 10px;
+        }
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>圖片載入測試</h1>
+        <div id="status" class="status info">準備測試圖片載入...</div>
+        
+        <button onclick="runTest()" class="btn">開始測試</button>
+        <button onclick="clearTest()" class="btn">清除測試</button>
+        
+        <div id="testGrid" class="test-grid"></div>
+    </div>
+
+    <script>
+        // 圖片載入成功處理
+        function handleImageLoad(img) {
+            img.style.opacity = '1';
+            img.classList.remove('loading', 'error');
+            updateStatus('success', `圖片載入成功: ${img.alt}`);
+        }
+
+        // 圖片載入失敗處理
+        function handleImageError(img) {
+            img.classList.add('error');
+            img.style.opacity = '1';
+            img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150"><rect width="200" height="150" fill="%23f8f9fa"/><text x="100" y="70" text-anchor="middle" dy=".3em" font-family="Arial" font-size="12" fill="%236c757d">圖片載入失敗</text><text x="100" y="85" text-anchor="middle" dy=".3em" font-family="Arial" font-size="10" fill="%23adb5bd">測試圖片</text></svg>';
+            updateStatus('error', `圖片載入失敗: ${img.alt}`);
+        }
+
+        function updateStatus(type, message) {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.textContent = message;
+        }
+
+        function runTest() {
+            const grid = document.getElementById('testGrid');
+            
+            // 測試圖片URLs（包含一些可能失敗的）
+            const testImages = [
+                { url: 'https://picsum.photos/200/150?random=1', title: '測試圖片 1' },
+                { url: 'https://picsum.photos/200/150?random=2', title: '測試圖片 2' },
+                { url: 'https://via.placeholder.com/200x150/0066cc/ffffff?text=Test+3', title: '測試圖片 3' },
+                { url: 'https://invalid-url-for-testing-error.jpg', title: '錯誤測試' },
+                { url: 'https://picsum.photos/200/150?random=4', title: '測試圖片 4' },
+                { url: 'https://via.placeholder.com/200x150/cc6600/ffffff?text=Test+5', title: '測試圖片 5' }
+            ];
+
+            grid.innerHTML = '';
+            updateStatus('info', '開始載入測試圖片...');
+
+            testImages.forEach((imgData, index) => {
+                const card = document.createElement('div');
+                card.className = 'test-card';
+                
+                card.innerHTML = `
+                    <img class="test-image" 
+                         src="${imgData.url}" 
+                         alt="${imgData.title}"
+                         onload="handleImageLoad(this)"
+                         onerror="handleImageError(this)">
+                    <div class="test-content">
+                        <h4>${imgData.title}</h4>
+                        <small>索引: ${index + 1}</small>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+
+        function clearTest() {
+            document.getElementById('testGrid').innerHTML = '';
+            updateStatus('info', '測試已清除');
+        }
+    </script>
+</body>
+</html>

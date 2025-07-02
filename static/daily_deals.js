@@ -47,6 +47,34 @@ function updatePlatformDescription(platform) {
     }
 }
 
+// 批量預載入圖片
+async function preloadImages(products) {
+    const batchSize = 5; // 每批載入5張圖片
+    const promises = [];
+    
+    for (let i = 0; i < products.length; i += batchSize) {
+        const batch = products.slice(i, i + batchSize);
+        const batchPromises = batch.map(product => {
+            if (product.image_url) {
+                return preloadImage(product.image_url).catch(err => {
+                    console.warn(`圖片預載入失敗: ${product.image_url}`, err);
+                    return null;
+                });
+            }
+            return Promise.resolve(null);
+        });
+        
+        promises.push(...batchPromises);
+        
+        // 每批之間延遲100ms，避免過度佔用網路
+        if (i + batchSize < products.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+    }
+    
+    return Promise.allSettled(promises);
+}
+
 // 載入每日促銷資料（支援平台參數）
 async function loadDailyDeals(platform = 'all') {
     showLoading(true);
@@ -72,6 +100,9 @@ async function loadDailyDeals(platform = 'all') {
             updateStats(data);
             displayProducts();
             setupPagination();
+            
+            // 預載入商品圖片
+            preloadImages(currentDeals);
         } else {
             showError('載入促銷商品失敗');
         }
@@ -90,37 +121,81 @@ function updateStats(data) {
     
     // 更新上次更新時間顯示
     if (data.latest_update) {
-        const updateTime = new Date(data.latest_update).toLocaleString('zh-TW');
-        let updateInfo = `最新更新: ${updateTime}`;
+        const updateTime = new Date(data.latest_update);
+        const now = new Date();
         
-        // 加入各平台更新時間
+        // 檢查時間是否有效
+        if (isNaN(updateTime.getTime())) {
+            document.getElementById('lastUpdate').innerHTML = '時間格式錯誤';
+            return;
+        }
+        
+        const timeStr = updateTime.toLocaleString('zh-TW', {
+            year: 'numeric',
+            month: 'numeric',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        // 計算相對時間
+        const timeDiff = now - updateTime;
+        const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+        const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+        
+        let relativeTime = '';
+        if (hours > 0) {
+            relativeTime = `${hours} 小時前`;
+        } else if (minutes > 0) {
+            relativeTime = `${minutes} 分鐘前`;
+        } else {
+            relativeTime = '剛剛';
+        }
+        
+        let updateInfo = `${timeStr}<br><small class="text-muted">${relativeTime}</small>`;
+        
+        // 加入各平台更新時間詳情
         if (data.platform_updates) {
             const platformDetails = [];
             if (data.platform_updates.pchome_onsale) {
-                const pchomeTime = new Date(data.platform_updates.pchome_onsale).toLocaleString('zh-TW', {
-                    month: 'numeric',
-                    day: 'numeric', 
-                    hour: '2-digit', 
-                    minute: '2-digit'
-                });
-                platformDetails.push(`PChome: ${pchomeTime}`);
+                const pchomeTime = new Date(data.platform_updates.pchome_onsale);
+                if (!isNaN(pchomeTime.getTime())) {
+                    const pchomeStr = pchomeTime.toLocaleString('zh-TW', {
+                        month: 'numeric',
+                        day: 'numeric', 
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                    });
+                    platformDetails.push(`PChome: ${pchomeStr}`);
+                }
             }
             if (data.platform_updates.yahoo_rushbuy) {
-                const yahooTime = new Date(data.platform_updates.yahoo_rushbuy).toLocaleString('zh-TW', {
-                    month: 'numeric',
-                    day: 'numeric', 
-                    hour: '2-digit', 
-                    minute: '2-digit'
-                });
-                platformDetails.push(`Yahoo: ${yahooTime}`);
+                const yahooTime = new Date(data.platform_updates.yahoo_rushbuy);
+                if (!isNaN(yahooTime.getTime())) {
+                    const yahooStr = yahooTime.toLocaleString('zh-TW', {
+                        month: 'numeric',
+                        day: 'numeric', 
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                    });
+                    platformDetails.push(`Yahoo: ${yahooStr}`);
+                }
             }
             
             if (platformDetails.length > 0) {
-                updateInfo += `<br><small>${platformDetails.join(' | ')}</small>`;
+                updateInfo += `<br><small class="text-muted">${platformDetails.join(' | ')}</small>`;
             }
         }
         
+        // 添加下次更新時間資訊
+        if (data.next_update_times) {
+            const nextUpdates = Object.values(data.next_update_times).join(', ');
+            updateInfo += `<br><small class="text-info">下次更新: ${nextUpdates}</small>`;
+        }
+        
         document.getElementById('lastUpdate').innerHTML = updateInfo;
+    } else {
+        document.getElementById('lastUpdate').innerHTML = '無更新資料';
     }
     
     // 計算價格範圍
@@ -149,37 +224,63 @@ function displayProducts() {
     }
     
     document.getElementById('emptyMessage').style.display = 'none';
-      container.innerHTML = pageProducts.map(product => {
+    
+    // 使用 DocumentFragment 批量更新 DOM，減少重排
+    const fragment = document.createDocumentFragment();
+    
+    pageProducts.forEach((product, index) => {
         // 獲取平台顯示名稱
         const platformName = getPlatformDisplayName(product.source_platform || product.platform);
         const platformIcon = getPlatformIcon(product.source_platform || product.platform);
         
-        return `
-            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
-                <div class="card product-card h-100" onclick="showProductDetail('${escapeHtml(JSON.stringify(product))}')">
-                    <div class="position-relative">
-                        <img src="${product.image_url}" class="card-img-top product-image" 
-                             alt="${product.title}" onerror="this.src='https://via.placeholder.com/300x200?text=圖片載入失敗'">
-                        <span class="deal-badge">
-                            <i class="fas fa-fire"></i> 特惠
-                        </span>
-                    </div>
-                    <div class="card-body d-flex flex-column">
-                        <h6 class="card-title" title="${product.title}">
-                            ${truncateText(product.title, 50)}
-                        </h6>                        <div class="mt-auto">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="price-tag">${formatPrice(product.price)}</span>
-                            </div>
-                            <small class="text-muted">
-                                <i class="${platformIcon} me-1"></i>${platformName}
-                            </small>
+        const productCard = document.createElement('div');
+        productCard.className = 'col-lg-3 col-md-4 col-sm-6 mb-4';
+        
+        productCard.innerHTML = `
+            <div class="card product-card h-100" onclick="showProductDetail('${escapeHtml(JSON.stringify(product))}')">
+                <div class="position-relative">
+                    <img class="card-img-top product-image" 
+                         src="${product.image_url}"
+                         alt="${product.title}" 
+                         loading="lazy"
+                         onerror="this.style.background='linear-gradient(45deg, #f8f9fa 25%, transparent 25%), linear-gradient(-45deg, #f8f9fa 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f8f9fa 75%), linear-gradient(-45deg, transparent 75%, #f8f9fa 75%)'; this.style.backgroundSize='20px 20px'; this.style.backgroundPosition='0 0, 0 10px, 10px -10px, -10px 0px'; console.log('圖片載入失敗:', this.src);"
+                         onload="this.style.opacity='1'; this.style.backgroundImage='none'; console.log('圖片載入成功:', this.src);"
+                         style="background-color: #f8f9fa; min-height: 200px; opacity: 0.3; transition: opacity 0.5s ease;
+                                background-image: linear-gradient(45deg, #e9ecef 25%, transparent 25%), 
+                                                  linear-gradient(-45deg, #e9ecef 25%, transparent 25%), 
+                                                  linear-gradient(45deg, transparent 75%, #e9ecef 75%), 
+                                                  linear-gradient(-45deg, transparent 75%, #e9ecef 75%);
+                                background-size: 20px 20px;
+                                background-position: 0 0, 0 10px, 10px -10px, -10px 0px;">
+                    <span class="deal-badge">
+                        <i class="fas fa-fire"></i> 特惠
+                    </span>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    <h6 class="card-title" title="${product.title}">
+                        ${truncateText(product.title, 50)}
+                    </h6>
+                    <div class="mt-auto">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="price-tag">${formatPrice(product.price)}</span>
                         </div>
+                        <small class="text-muted">
+                            <i class="${platformIcon} me-1"></i>${platformName}
+                        </small>
                     </div>
                 </div>
             </div>
         `;
-    }).join('');
+        
+        fragment.appendChild(productCard);
+    });
+    
+    // 一次性更新 DOM
+    container.innerHTML = '';
+    container.appendChild(fragment);
+    
+    // 簡單記錄圖片載入狀況
+    console.log(`顯示 ${pageProducts.length} 個商品，頁面 ${currentPage}`);
 }
 
 // 獲取平台顯示名稱
@@ -279,15 +380,21 @@ function showProductDetail(productJson) {
         }
         
         document.getElementById('productModalTitle').textContent = product.title;
-        document.getElementById('productModalBody').innerHTML = `
+        
+        // 創建模態框內容
+        const modalBody = document.getElementById('productModalBody');
+        modalBody.innerHTML = `
             <div class="row">
                 <div class="col-md-6">
-                    <img src="${product.image_url}" class="img-fluid rounded" alt="${product.title}"
-                         onerror="this.src='https://via.placeholder.com/400x300?text=圖片載入失敗'">
+                    <div class="text-center">
+                        <img class="img-fluid rounded" alt="${product.title}"
+                             style="background-color: #f8f9fa; min-height: 300px; width: 100%; object-fit: cover;">
+                    </div>
                 </div>
                 <div class="col-md-6">
                     <h4 class="text-primary">${product.title}</h4>
-                    <hr>                    <div class="mb-3">
+                    <hr>
+                    <div class="mb-3">
                         <h3 class="text-danger">
                             <i class="fas fa-tag me-2"></i>${formatPrice(product.price)}
                         </h3>
@@ -308,6 +415,21 @@ function showProductDetail(productJson) {
             </div>
         `;
         
+        // 延遲載入模態框圖片
+        setTimeout(() => {
+            const modalImg = modalBody.querySelector('img');
+            if (modalImg && product.image_url) {
+                modalImg.src = product.image_url;
+                modalImg.onload = function() {
+                    this.style.transition = 'opacity 0.3s ease';
+                    this.style.opacity = '1';
+                };
+                modalImg.onerror = function() {
+                    handleImageError(this);
+                };
+            }
+        }, 100);
+        
         // 動態更新按鈕
         const viewButton = document.getElementById('viewOnPlatform');
         viewButton.href = product.url;
@@ -323,13 +445,30 @@ function showProductDetail(productJson) {
 
 // 應用篩選
 function applyFilters() {
-    const searchTerm = document.getElementById('searchProduct').value.toLowerCase();
+    const searchTerm = document.getElementById('searchProduct').value.trim();
     const priceFilter = document.getElementById('priceFilter').value;
+    
+    // 如果有搜尋關鍵字，可以選擇使用 API 搜尋或本地篩選
+    if (searchTerm && searchTerm.length >= 2) {
+        // 對於關鍵字搜尋，先嘗試本地篩選
+        performLocalSearch(searchTerm, priceFilter);
+        
+        // 可選：同時執行 API 搜尋來獲得更多結果
+        // performAPISearch(searchTerm, priceFilter);
+    } else {
+        performLocalSearch(searchTerm, priceFilter);
+    }
+}
+
+// 執行本地搜尋（適用於已載入的促銷商品）
+function performLocalSearch(searchTerm = '', priceFilter = '') {
+    const searchLower = searchTerm.toLowerCase();
     
     currentDeals = allDeals.filter(product => {
         // 搜尋篩選
-        const matchesSearch = !searchTerm || 
-            product.title.toLowerCase().includes(searchTerm);
+        const matchesSearch = !searchLower || 
+            product.title.toLowerCase().includes(searchLower) ||
+            (product.description && product.description.toLowerCase().includes(searchLower));
         
         // 價格篩選
         let matchesPrice = true;
@@ -345,6 +484,53 @@ function applyFilters() {
     currentPage = 1;
     displayProducts();
     setupPagination();
+    
+    // 更新搜尋統計
+    if (searchTerm) {
+        updateSearchInfo(currentDeals.length, searchTerm);
+    }
+}
+
+// 執行 API 搜尋（可選功能，用於擴展搜尋結果）
+async function performAPISearch(keyword, priceFilter = '') {
+    if (!keyword.trim()) return;
+    
+    try {
+        const params = new URLSearchParams({
+            keyword: keyword,
+            limit: 50
+        });
+        
+        if (currentPlatform && currentPlatform !== 'all') {
+            params.append('platform', currentPlatform);
+        }
+
+        const response = await fetch(`/api/search?${params}`);
+        const data = await response.json();
+
+        if (data.status === 'success' && data.products.length > 0) {
+            // 將 API 搜尋結果加入到當前結果中（去重）
+            const existingTitles = new Set(currentDeals.map(p => p.title));
+            const newProducts = data.products.filter(p => !existingTitles.has(p.title));
+            
+            if (newProducts.length > 0) {
+                currentDeals = [...currentDeals, ...newProducts];
+                displayProducts();
+                setupPagination();
+            }
+        }
+    } catch (error) {
+        console.error('API 搜尋錯誤:', error);
+    }
+}
+
+// 更新搜尋資訊顯示
+function updateSearchInfo(count, keyword) {
+    const searchInfo = document.getElementById('searchInfo');
+    if (searchInfo) {
+        searchInfo.textContent = `找到 ${count} 個包含「${keyword}」的商品`;
+        searchInfo.style.display = 'block';
+    }
 }
 
 // 重新整理促銷商品
@@ -437,3 +623,53 @@ document.getElementById('searchProduct').addEventListener('input', function() {
 
 // 價格篩選變更時自動應用
 document.getElementById('priceFilter').addEventListener('change', applyFilters);
+
+// 圖片載入成功處理
+function handleImageLoad(img) {
+    img.style.opacity = '1';
+    img.classList.remove('loading', 'error');
+}
+
+// 圖片載入失敗處理
+function handleImageError(img) {
+    console.log('圖片載入失敗處理:', img.src);
+    img.classList.add('error');
+    img.style.opacity = '1';
+    img.style.transition = 'opacity 0.3s ease';
+    
+    // 使用更簡潔的預設圖片
+    const width = img.clientWidth || 300;
+    const height = img.clientHeight || 200;
+    
+    img.src = `data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+        <rect width="${width}" height="${height}" fill="%23f8f9fa"/>
+        <circle cx="${width/2}" cy="${height/2-20}" r="30" fill="%23dee2e6"/>
+        <path d="M${width/2-15} ${height/2-25} L${width/2+15} ${height/2-15} L${width/2} ${height/2-5} Z" fill="%23adb5bd"/>
+        <text x="${width/2}" y="${height/2+15}" text-anchor="middle" font-family="Arial" font-size="12" fill="%236c757d">圖片無法載入</text>
+        <text x="${width/2}" y="${height/2+30}" text-anchor="middle" font-family="Arial" font-size="10" fill="%23adb5bd">點擊查看詳情</text>
+    </svg>`;
+}
+
+// 測試特定圖片URL
+function testImageUrl(url) {
+    console.log('測試圖片URL:', url);
+    const img = new Image();
+    img.onload = function() {
+        console.log('✅ 圖片可載入:', url);
+    };
+    img.onerror = function() {
+        console.log('❌ 圖片載入失敗:', url);
+    };
+    img.src = url;
+    return img;
+}
+
+// 預載入圖片
+function preloadImage(src) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+        img.src = src;
+    });
+}

@@ -331,8 +331,7 @@ class CrawlerDatabase:
                         'title': product['title'],
                         'price': product['price'],
                         'image_url': product['image_url'],
-                        'url': product['product_url'],
-                        'platform': product['platform']
+                        'url': product['product_url'],                        'platform': product['platform']
                     }
                     for product in products
                 ]
@@ -348,6 +347,135 @@ class CrawlerDatabase:
         except Exception as e:
             print(f"❌ 匯出失敗: {e}")
             return False
+    
+    def search_products(self, keyword: str, platform: str = None, min_price: float = None, 
+                       max_price: float = None, limit: int = 50) -> List[Dict]:
+        """搜尋商品"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                # 建立基本查詢
+                query = '''
+                    SELECT p.*, s.keyword, s.timestamp 
+                    FROM products p 
+                    JOIN crawl_sessions s ON p.session_id = s.id 
+                    WHERE p.title LIKE ?
+                '''
+                params = [f'%{keyword}%']
+                
+                # 添加平台篩選
+                if platform:
+                    query += ' AND p.platform = ?'
+                    params.append(platform)
+                
+                # 添加價格篩選
+                if min_price is not None:
+                    query += ' AND p.price_numeric >= ?'
+                    params.append(min_price)
+                
+                if max_price is not None:
+                    query += ' AND p.price_numeric <= ?'
+                    params.append(max_price)
+                
+                # 排序和限制
+                query += ' ORDER BY p.created_at DESC LIMIT ?'
+                params.append(limit)
+                
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+                
+                # 轉換為字典格式
+                products = []
+                for row in rows:
+                    product = {
+                        'id': row['id'],
+                        'title': row['title'],
+                        'price': row['price'],
+                        'price_numeric': row['price_numeric'],
+                        'image_url': row['image_url'],
+                        'product_url': row['product_url'],
+                        'platform': row['platform'],
+                        'crawl_time': row['crawl_time'],
+                        'keyword': row['keyword'],
+                        'session_timestamp': row['timestamp']
+                    }
+                    products.append(product)
+                
+                return products
+                
+        except Exception as e:
+            print(f"搜尋商品失敗: {e}")
+            return []
+    
+    def get_recent_sessions(self, limit: int = 10) -> List[Dict]:
+        """獲取最近的爬蟲執行記錄"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT * FROM crawl_sessions 
+                    ORDER BY created_at DESC 
+                    LIMIT ?
+                ''', (limit,))
+                
+                rows = cursor.fetchall()
+                sessions = []
+                for row in rows:
+                    session = {
+                        'id': row['id'],
+                        'timestamp': row['timestamp'],
+                        'platform': row['platform'],
+                        'keyword': row['keyword'],
+                        'total_products': row['total_products'],
+                        'status': row['status'],
+                        'execution_time': row['execution_time'],
+                        'created_at': row['created_at']
+                    }
+                    sessions.append(session)
+                
+                return sessions
+                
+        except Exception as e:
+            print(f"獲取會話記錄失敗: {e}")
+            return []
+    
+    def get_product_by_id(self, product_id: int) -> Optional[Dict]:
+        """根據 ID 獲取單個商品詳情"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                    SELECT p.*, s.keyword, s.timestamp 
+                    FROM products p 
+                    JOIN crawl_sessions s ON p.session_id = s.id 
+                    WHERE p.id = ?
+                ''', (product_id,))
+                
+                row = cursor.fetchone()
+                if row:
+                    return {
+                        'id': row['id'],
+                        'title': row['title'],
+                        'price': row['price'],
+                        'price_numeric': row['price_numeric'],
+                        'image_url': row['image_url'],
+                        'product_url': row['product_url'],
+                        'platform': row['platform'],
+                        'crawl_time': row['crawl_time'],
+                        'keyword': row['keyword'],
+                        'session_timestamp': row['timestamp']
+                    }
+                return None
+                
+        except Exception as e:
+            print(f"獲取商品詳情失敗: {e}")
+            return None
 
 if __name__ == "__main__":
     # 測試資料庫功能

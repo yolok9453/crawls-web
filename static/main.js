@@ -1,12 +1,40 @@
 // 主頁面的JavaScript功能
 let allResults = [];
 let filteredResults = [];
+let searchCache = new Map(); // 搜尋快取
+let updateTimeout; // 防抖計時器
+
+// 添加版本控制和快取清理
+const APP_VERSION = '2.0.0';
+const CACHE_VERSION = 'v2.0.0';
+
+// 檢查和清理舊快取
+function clearOldCache() {
+  const currentVersion = localStorage.getItem('app_version');
+  if (currentVersion !== APP_VERSION) {
+    localStorage.clear();
+    sessionStorage.clear();
+    searchCache.clear();
+    localStorage.setItem('app_version', APP_VERSION);
+    console.log('🧹 已清理舊版本快取');
+  }
+}
 
 // 頁面載入完成後初始化
 document.addEventListener("DOMContentLoaded", function () {
+  // 確保只初始化一次
+  if (window.crawlerAppInitialized) {
+    return;
+  }
+  window.crawlerAppInitialized = true;
+  
+  clearOldCache();
   loadResults();
   loadPlatforms();
   loadDailyDealsStats(); // 載入每日促銷統計
+  
+  // 綁定事件監聽器
+  setupEventListeners();
 });
 
 // 載入所有結果
@@ -56,39 +84,87 @@ async function loadPlatforms() {
 
 // 載入每日促銷統計
 async function loadDailyDealsStats() {
+  // 防止重複調用
+  if (loadDailyDealsStats.loading) {
+    return;
+  }
+  loadDailyDealsStats.loading = true;
+  
   try {
-    const response = await fetch("/api/daily-deals");
+    const response = await fetch("/api/daily-deals", {
+      method: 'GET',
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    
     const data = await response.json();
 
     if (data.status === "success") {
-      document.getElementById("dailyDealsCount").textContent =
-        data.total_deals || 0;
+      const countElement = document.getElementById("dailyDealsCount");
+      if (countElement) {
+        countElement.textContent = data.total_deals || 0;
+      }
+    } else {
+      console.warn("每日促銷 API 回傳非成功狀態:", data);
+      const countElement = document.getElementById("dailyDealsCount");
+      if (countElement) {
+        countElement.textContent = "0";
+      }
     }
   } catch (error) {
     console.error("載入每日促銷統計失敗:", error);
-    document.getElementById("dailyDealsCount").textContent = "0";
+    const countElement = document.getElementById("dailyDealsCount");
+    if (countElement) {
+      countElement.textContent = "0";
+    }
+  } finally {
+    loadDailyDealsStats.loading = false;
   }
 }
 
-// 更新UI
+// 更新UI（防抖版本）
 function updateUI() {
+  // 清除之前的計時器
+  clearTimeout(updateTimeout);
+  
+  // 設定新的計時器，50ms 後執行更新
+  updateTimeout = setTimeout(() => {
+    updateUIImmediate();
+  }, 50);
+}
+
+// 立即更新UI（實際執行函數）
+function updateUIImmediate() {
   const tableBody = document.getElementById("resultsTableBody");
+  const emptyMessage = document.getElementById("emptyMessage");
+  const tableContainer = document.querySelector(".table-responsive");
 
   if (filteredResults.length === 0) {
-    showEmptyMessage();
+    // 顯示空訊息，隱藏表格
+    if (emptyMessage) emptyMessage.style.display = "block";
+    if (tableContainer) tableContainer.style.display = "none";
     return;
   }
 
+  // 有結果時，隱藏空訊息，顯示表格
+  if (emptyMessage) emptyMessage.style.display = "none";
+  if (tableContainer) tableContainer.style.display = "block";
+
   // 清空表格
-  tableBody.innerHTML = "";
+  if (tableBody) {
+    tableBody.innerHTML = "";
 
-  // 添加結果行
-  filteredResults.forEach((result) => {
-    const row = createResultRow(result);
-    tableBody.appendChild(row);
-  });
-
-  document.getElementById("emptyMessage").style.display = "none";
+    // 添加結果行
+    filteredResults.forEach((result) => {
+      const row = createResultRow(result);
+      tableBody.appendChild(row);
+    });
+  }
 }
 
 // 建立結果行
@@ -180,18 +256,103 @@ function updateStatistics() {
 
 // 套用篩選
 function applyFilters() {
-  const keyword = document.getElementById("searchKeyword").value.toLowerCase();
+  const keyword = document.getElementById("searchKeyword").value.trim();
   const platform = document.getElementById("filterPlatform").value;
 
-  filteredResults = allResults.filter((result) => {
-    const matchKeyword =
-      !keyword || result.keyword.toLowerCase().includes(keyword);
-    const matchPlatform = !platform || result.platforms.includes(platform);
+  // 如果有關鍵字搜尋，使用 API 搜尋
+  if (keyword) {
+    performSearch(keyword, platform);
+  } else {
+    // 無關鍵字時，只篩選平台
+    filteredResults = allResults.filter((result) => {
+      const matchPlatform = !platform || result.platforms.includes(platform);
+      return matchPlatform;
+    });
+    updateUI();
+  }
+}
 
-    return matchKeyword && matchPlatform;
-  });
+// 執行 API 搜尋
+async function performSearch(keyword, platform = '') {
+  if (!keyword.trim()) {
+    // 無關鍵字時，只篩選平台，不要遞歸調用
+    filteredResults = allResults.filter((result) => {
+      const matchPlatform = !platform || result.platforms.includes(platform);
+      return matchPlatform;
+    });
+    updateUI();
+    return;
+  }
 
-  updateUI();
+  // 檢查快取
+  const cacheKey = `${keyword}_${platform}`;
+  if (searchCache.has(cacheKey)) {
+    const cachedData = searchCache.get(cacheKey);
+    filteredResults = cachedData.results;
+    updateUI();
+    updateSearchStats(cachedData.total, keyword);
+    return;
+  }
+
+  showLoading(true);
+  
+  try {
+    const params = new URLSearchParams({
+      keyword: keyword,
+      limit: 100
+    });
+    
+    if (platform && platform !== 'all') {
+      params.append('platform', platform);
+    }
+
+    const response = await fetch(`/api/search?${params}`);
+    const data = await response.json();
+
+    if (data.status === 'success') {
+      // 將搜尋結果轉換為與現有格式相容的結構
+      const searchResults = data.products.map(product => ({
+        keyword: keyword,
+        filename: `search_${keyword}_${Date.now()}.json`,
+        crawl_time: product.crawl_time || new Date().toISOString(),
+        platforms: [product.platform || 'unknown'],
+        total_products: 1,
+        products: [product]
+      }));
+
+      filteredResults = searchResults;
+      
+      // 儲存到快取（最多快取 20 個搜尋結果）
+      if (searchCache.size >= 20) {
+        const firstKey = searchCache.keys().next().value;
+        searchCache.delete(firstKey);
+      }
+      searchCache.set(cacheKey, {
+        results: searchResults,
+        total: data.total,
+        timestamp: Date.now()
+      });
+      
+      updateUI();
+      updateSearchStats(data.total, keyword);
+    } else {
+      console.error('搜尋失敗:', data.error);
+      showEmptyMessage(`搜尋「${keyword}」沒有找到結果`);
+    }
+  } catch (error) {
+    console.error('搜尋時發生錯誤:', error);
+    showEmptyMessage('搜尋時發生錯誤，請稍後再試');
+  } finally {
+    showLoading(false);
+  }
+}
+
+// 更新搜尋統計
+function updateSearchStats(total, keyword) {
+  const statsElement = document.querySelector('.search-stats');
+  if (statsElement) {
+    statsElement.textContent = `找到 ${total} 個「${keyword}」的搜尋結果`;
+  }
 }
 
 // 重新整理結果
@@ -306,9 +467,24 @@ function showLoading(show) {
 }
 
 // 顯示空訊息
-function showEmptyMessage() {
-  document.getElementById("emptyMessage").style.display = "block";
-  document.querySelector(".table-responsive").style.display = "none";
+function showEmptyMessage(message) {
+  const emptyMessage = document.getElementById("emptyMessage");
+  const tableContainer = document.querySelector(".table-responsive");
+  
+  if (emptyMessage) {
+    emptyMessage.style.display = "block";
+    // 如果有自定義訊息，更新顯示文字
+    if (message) {
+      const messageText = emptyMessage.querySelector('p');
+      if (messageText) {
+        messageText.textContent = message;
+      }
+    }
+  }
+  
+  if (tableContainer) {
+    tableContainer.style.display = "none";
+  }
 }
 
 // 格式化檔案大小
@@ -322,24 +498,29 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-// 搜尋功能 - 即時搜尋
-document.getElementById("searchKeyword").addEventListener("input", function () {
-  clearTimeout(this.searchTimeout);
-  this.searchTimeout = setTimeout(() => {
-    applyFilters();
-  }, 300);
-});
+// 設定事件監聽器
+function setupEventListeners() {
+  // 搜尋功能 - 即時搜尋（增加防抖時間）
+  const searchInput = document.getElementById("searchKeyword");
+  if (searchInput && !searchInput.hasAttribute('data-listener-added')) {
+    searchInput.addEventListener("input", function () {
+      clearTimeout(this.searchTimeout);
+      this.searchTimeout = setTimeout(() => {
+        applyFilters();
+      }, 500); // 增加到 500ms 減少頻繁搜尋
+    });
+    searchInput.setAttribute('data-listener-added', 'true');
+  }
 
-// 平台篩選
-document
-  .getElementById("filterPlatform")
-  .addEventListener("change", applyFilters);
+  // 平台篩選
+  const platformSelect = document.getElementById("filterPlatform");
+  if (platformSelect && !platformSelect.hasAttribute('data-listener-added')) {
+    platformSelect.addEventListener("change", applyFilters);
+    platformSelect.setAttribute('data-listener-added', 'true');
+  }
+}
 
 // 跳轉到每日促銷頁面
-document
-  .getElementById("dailyDealsPage")
-  .addEventListener("click", goToDailyDeals);
-
 function goToDailyDeals() {
   window.location.href = "/daily-deals";
 }

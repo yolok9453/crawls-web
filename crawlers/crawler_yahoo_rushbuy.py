@@ -209,8 +209,8 @@ def save_to_json(products, keyword="yahoo_rushbuy"):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"crawler_results_{keyword}.json"
         file_path = os.path.join(data_dir, filename)
-        
         data_to_save = {
+            "timestamp": datetime.now().isoformat(),
             "platform": "yahoo_rushbuy",
             "keyword": keyword,
             "total_products": len(products),

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 測試頁面</title>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; margin: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        button { padding: 8px 16px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>每日促銷 API 測試</h1>
+    
+    <div class="section">
+        <h3>測試控制</h3>
+        <button onclick="testDailyDealsAPI()">測試每日促銷 API</button>
+        <button onclick="clearResults()">清空結果</button>
+    </div>
+    
+    <div id="results"></div>
+    
+    <script>
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `section ${type}`;
+            div.innerHTML = `<pre>${new Date().toLocaleTimeString()}: ${message}</pre>`;
+            results.appendChild(div);
+            console.log(message);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testDailyDealsAPI() {
+            log('開始測試每日促銷 API...', 'loading');
+            
+            try {
+                const response = await fetch('/api/daily-deals');
+                log(`HTTP Status: ${response.status}`, response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`API 回傳成功:
+Status: ${data.status}
+Total deals: ${data.total_deals}
+Latest update: ${data.latest_update}
+Next update times: ${JSON.stringify(data.next_update_times)}
+Daily deals count: ${data.daily_deals ? data.daily_deals.length : 0}`, 'success');
+                    
+                    if (data.daily_deals) {
+                        data.daily_deals.forEach((deal, index) => {
+                            log(`Deal ${index + 1}: ${deal.platform} - ${deal.total_products} products`, 'success');
+                        });
+                    }
+                } else {
+                    const errorText = await response.text();
+                    log(`API 錯誤: ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log(`請求失敗: ${error.message}`, 'error');
+            }
+        }
+        
+        // 頁面載入時自動測試
+        window.addEventListener('DOMContentLoaded', function() {
+            log('頁面載入完成，開始自動測試...', 'info');
+            testDailyDealsAPI();
+        });
+    </script>
+</body>
+</html>

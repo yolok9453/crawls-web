@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統儀表板 - 每日促銷爬蟲系統</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
+    <style>
+        .dashboard-card {
+            transition: transform 0.2s;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-success { background-color: #28a745; }
+        .status-warning { background-color: #ffc107; }
+        .status-error { background-color: #dc3545; }
+        .status-info { background-color: #17a2b8; }
+        
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        .test-success { border-color: #28a745; background-color: #d4edda; }
+        .test-error { border-color: #dc3545; background-color: #f8d7da; }
+        .test-warning { border-color: #ffc107; background-color: #fff3cd; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-chart-line me-2"></i>系統儀表板
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">首頁</a>
+                <a class="nav-link" href="/daily-deals">每日促銷</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 系統概覽 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2><i class="fas fa-tachometer-alt me-2"></i>系統概覽</h2>
+            </div>
+        </div>
+
+        <!-- 關鍵指標 -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <h3 id="totalProducts">-</h3>
+                    <p class="mb-0">總促銷商品</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <h3 id="activePlatforms">-</h3>
+                    <p class="mb-0">活躍平台</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <h3 id="lastUpdate">-</h3>
+                    <p class="mb-0">最後更新</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card text-center">
+                    <h3 id="systemStatus">-</h3>
+                    <p class="mb-0">系統狀態</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- API 狀態 -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-plug me-2"></i>API 端點狀態</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="apiStatus">
+                            <div class="d-flex justify-content-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">載入中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card dashboard-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-globe me-2"></i>網頁頁面狀態</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="pageStatus">
+                            <div class="d-flex justify-content-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">載入中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 平台詳情 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card dashboard-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-store me-2"></i>平台詳情</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="platformDetails">
+                            <div class="d-flex justify-content-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">載入中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快速動作 -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card dashboard-card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-tools me-2"></i>快速動作</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3 mb-2">
+                                <a href="/daily-deals" class="btn btn-primary w-100">
+                                    <i class="fas fa-shopping-cart me-2"></i>查看每日促銷
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <a href="/api_test.html" class="btn btn-info w-100">
+                                    <i class="fas fa-vial me-2"></i>API 測試
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <a href="/image_test.html" class="btn btn-warning w-100">
+                                    <i class="fas fa-image me-2"></i>圖片測試
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <button onclick="refreshDashboard()" class="btn btn-success w-100">
+                                    <i class="fas fa-sync me-2"></i>重新整理
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 儀表板功能
+        async function checkAPI(url, name) {
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    const data = await response.json();
+                    return { success: true, data, status: response.status };
+                } else {
+                    return { success: false, status: response.status };
+                }
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function checkPage(url, name) {
+            try {
+                const response = await fetch(url);
+                return { success: response.ok, status: response.status };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function loadDashboard() {
+            // 載入每日促銷數據
+            const dailyDealsResult = await checkAPI('/api/daily-deals', '每日促銷 API');
+            if (dailyDealsResult.success) {
+                const data = dailyDealsResult.data;
+                document.getElementById('totalProducts').textContent = data.total_deals || 0;
+                document.getElementById('activePlatforms').textContent = data.daily_deals ? data.daily_deals.length : 0;
+                
+                if (data.latest_update) {
+                    const updateTime = new Date(data.latest_update);
+                    const hours = Math.floor((new Date() - updateTime) / (1000 * 60 * 60));
+                    document.getElementById('lastUpdate').textContent = hours > 0 ? `${hours}h 前` : '剛剛';
+                }
+                
+                document.getElementById('systemStatus').textContent = '正常';
+                
+                // 顯示平台詳情
+                showPlatformDetails(data.daily_deals || []);
+            }
+
+            // 檢查 API 狀態
+            const apis = [
+                { url: '/api/daily-deals', name: '每日促銷 API' },
+                { url: '/api/crawlers', name: '爬蟲列表 API' },
+                { url: '/api/results', name: '結果檔案 API' },
+                { url: '/api/sqlite/sessions', name: 'SQLite 會話 API' }
+            ];
+
+            let apiStatusHtml = '';
+            for (const api of apis) {
+                const result = await checkAPI(api.url, api.name);
+                const statusClass = result.success ? 'status-success' : 'status-error';
+                const statusText = result.success ? '正常' : '錯誤';
+                apiStatusHtml += `
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span>${api.name}</span>
+                        <span><div class="status-indicator ${statusClass}"></div>${statusText}</span>
+                    </div>
+                `;
+            }
+            document.getElementById('apiStatus').innerHTML = apiStatusHtml;
+
+            // 檢查頁面狀態
+            const pages = [
+                { url: '/', name: '首頁' },
+                { url: '/daily-deals', name: '每日促銷頁面' },
+                { url: '/api_test.html', name: 'API 測試頁' },
+                { url: '/image_test.html', name: '圖片測試頁' }
+            ];
+
+            let pageStatusHtml = '';
+            for (const page of pages) {
+                const result = await checkPage(page.url, page.name);
+                const statusClass = result.success ? 'status-success' : 'status-error';
+                const statusText = result.success ? '可訪問' : '錯誤';
+                pageStatusHtml += `
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <span>${page.name}</span>
+                        <span><div class="status-indicator ${statusClass}"></div>${statusText}</span>
+                    </div>
+                `;
+            }
+            document.getElementById('pageStatus').innerHTML = pageStatusHtml;
+        }
+
+        function showPlatformDetails(platforms) {
+            let html = '<div class="row">';
+            
+            platforms.forEach(platform => {
+                const updateTime = platform.crawl_time ? new Date(platform.crawl_time).toLocaleString('zh-TW') : 'N/A';
+                html += `
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">${platform.platform === 'pchome_onsale' ? 'PChome 促銷' : 'Yahoo 秒殺'}</h6>
+                                <p class="card-text">
+                                    <strong>商品數:</strong> ${platform.total_products}<br>
+                                    <strong>更新時間:</strong> ${updateTime}<br>
+                                    <strong>檔案大小:</strong> ${(platform.file_size / 1024).toFixed(1)} KB
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            document.getElementById('platformDetails').innerHTML = html;
+        }
+
+        function refreshDashboard() {
+            location.reload();
+        }
+
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+
+        // 每 30 秒自動重新整理
+        setInterval(loadDashboard, 30000);
+    </script>
+</body>
+</html>

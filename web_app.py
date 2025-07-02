@@ -9,6 +9,7 @@ import json
 import glob
 from datetime import datetime
 from crawler_manager import CrawlerManager
+from crawler_database import CrawlerDatabase
 
 app = Flask(__name__)
 
@@ -16,8 +17,9 @@ app = Flask(__name__)
 app.static_folder = 'static'
 app.template_folder = 'templates'
 
-# 初始化爬蟲管理器
+# 初始化爬蟲管理器和資料庫
 crawler_manager = CrawlerManager()
+db = CrawlerDatabase()
 
 @app.route('/')
 def index():
@@ -35,6 +37,150 @@ def get_crawlers():
         'crawlers': available_crawlers,
         'status': 'success'
     })
+
+@app.route('/api/search')
+def search_products():
+    """搜尋商品（支援 SQLite 和 JSON 雙重來源）"""
+    keyword = request.args.get('keyword', '').strip()
+    platform = request.args.get('platform', 'all')
+    min_price = request.args.get('min_price', type=float)
+    max_price = request.args.get('max_price', type=float)
+    limit = request.args.get('limit', 50, type=int)
+    use_sqlite = request.args.get('use_sqlite', 'true').lower() == 'true'
+    
+    if not keyword:
+        return jsonify({'error': '請輸入搜尋關鍵字'}), 400
+    
+    try:
+        if use_sqlite:
+            # 優先使用 SQLite 搜尋
+            products = db.search_products(
+                keyword=keyword,
+                platform=platform if platform != 'all' else None,
+                min_price=min_price,
+                max_price=max_price,
+                limit=limit
+            )
+            
+            return jsonify({
+                'products': products,
+                'total': len(products),
+                'keyword': keyword,
+                'source': 'sqlite',
+                'status': 'success'
+            })
+        else:
+            # 使用 JSON 檔案搜尋（備援方案）
+            return search_products_from_json(keyword, platform, min_price, max_price, limit)
+            
+    except Exception as e:
+        print(f"SQLite 搜尋失敗，改用 JSON 搜尋: {e}")
+        return search_products_from_json(keyword, platform, min_price, max_price, limit)
+
+def search_products_from_json(keyword, platform, min_price, max_price, limit):
+    """從 JSON 檔案搜尋商品（備援方案）"""
+    results_dir = crawler_manager.output_dir
+    all_products = []
+    
+    # 搜尋所有 JSON 檔案
+    json_files = glob.glob(os.path.join(results_dir, "*.json"))
+    
+    for file_path in json_files:
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            
+            # 處理不同格式的 JSON 檔案
+            products = []
+            if 'results' in data:
+                # 新格式：多平台結果
+                for plat, result in data['results'].items():
+                    if platform != 'all' and plat != platform:
+                        continue
+                    products.extend(result.get('products', []))
+            elif 'products' in data:
+                # 舊格式：單平台結果
+                file_platform = data.get('platform', 'unknown')
+                if platform == 'all' or file_platform == platform:
+                    products = data['products']
+            
+            # 過濾產品
+            for product in products:
+                title = product.get('title', '').lower()
+                if keyword.lower() in title:
+                    # 價格過濾
+                    price = product.get('price_numeric', product.get('price', 0))
+                    if isinstance(price, str):
+                        price = float(price.replace('$', '').replace(',', '').replace('NT', '') or 0)
+                    
+                    if min_price is not None and price < min_price:
+                        continue
+                    if max_price is not None and price > max_price:
+                        continue
+                    
+                    all_products.append(product)
+                    
+                    if len(all_products) >= limit:
+                        break
+            
+            if len(all_products) >= limit:
+                break
+                
+        except Exception as e:
+            print(f"讀取檔案 {file_path} 失敗: {e}")
+    
+    return jsonify({
+        'products': all_products[:limit],
+        'total': len(all_products),
+        'keyword': keyword,
+        'source': 'json',
+        'status': 'success'
+    })
+
+@app.route('/api/sqlite/sessions')
+def get_sqlite_sessions():
+    """獲取 SQLite 中的爬蟲執行記錄"""
+    try:
+        limit = request.args.get('limit', 20, type=int)
+        platform = request.args.get('platform')
+        
+        sessions = db.get_crawl_sessions(platform=platform, limit=limit)
+        
+        return jsonify({
+            'sessions': sessions,
+            'total': len(sessions),
+            'status': 'success'
+        })
+    except Exception as e:
+        return jsonify({'error': f'獲取執行記錄失敗: {str(e)}'}), 500
+
+@app.route('/api/sqlite/products/<int:session_id>')
+def get_sqlite_products_by_session(session_id):
+    """獲取特定執行記錄的商品"""
+    try:
+        products = db.get_products_by_session(session_id)
+        
+        return jsonify({
+            'products': products,
+            'session_id': session_id,
+            'total': len(products),
+            'status': 'success'
+        })
+    except Exception as e:
+        return jsonify({'error': f'獲取商品失敗: {str(e)}'}), 500
+
+@app.route('/api/sqlite/stats')
+def get_sqlite_stats():
+    """獲取 SQLite 資料庫統計"""
+    try:
+        stats = db.get_database_stats()
+        
+        return jsonify({
+            'stats': stats,
+            'status': 'success'
+        })
+    except Exception as e:
+        return jsonify({'error': f'獲取統計失敗: {str(e)}'}), 500
 
 @app.route('/api/results')
 def get_results():
@@ -224,69 +370,70 @@ def crawler_page():
 
 @app.route('/api/daily-deals')
 def get_daily_deals():
-    """獲取每日促銷（PCHOME ONSALE + YAHOO RUSHBUY）結果"""
-    results_dir = crawler_manager.output_dir
+    """獲取每日促銷（直接讀取 PChome 和 Yahoo 檔案）"""
     daily_deals = []
     
-    # 處理 PCHOME ONSALE 商品
-    pchome_file = os.path.join(results_dir, "crawler_results_pchome_onsale.json")
+    # 直接讀取 PChome 促銷檔案
+    pchome_file = os.path.join(crawler_manager.output_dir, "crawler_results_pchome_onsale.json")
     if os.path.exists(pchome_file):
         try:
+            print(f"讀取 PChome 檔案: {pchome_file}")
             with open(pchome_file, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                
-            # 處理新格式（有 results 結構）或舊格式
-            if 'results' in data and 'pchome_onsale' in data['results']:
-                # 新格式：有 results 結構
-                pchome_result = data['results']['pchome_onsale']
-                file_info = {
-                    'filename': os.path.basename(pchome_file),
-                    'filepath': pchome_file,
-                    'keyword': data.get('keyword', 'pchome_onsale'),
-                    'total_products': pchome_result.get('total_products', 0),
-                    'crawl_time': data.get('crawl_time', pchome_result.get('crawl_time', '')),
-                    'file_size': os.path.getsize(pchome_file),
-                    'platform': 'pchome_onsale',
-                    'products': pchome_result.get('products', [])
-                }
-                daily_deals.append(file_info)
-            elif data.get('platform') == 'pchome_onsale' or 'pchome_onsale' in data.get('keyword', ''):
-                # 舊格式：直接包含產品資料
-                file_info = {
-                    'filename': os.path.basename(pchome_file),
-                    'filepath': pchome_file,
-                    'keyword': data.get('keyword', 'pchome_onsale'),
-                    'total_products': data.get('total_products', 0),
-                    'crawl_time': data.get('crawl_time', data.get('timestamp', '')),
-                    'file_size': os.path.getsize(pchome_file),
-                    'platform': 'pchome_onsale',
-                    'products': data.get('products', [])
-                }
-                daily_deals.append(file_info)
+                pchome_data = json.load(f)
+            
+            # 使用檔案的時間戳記或修改時間
+            crawl_time = pchome_data.get('timestamp') or pchome_data.get('crawl_time')
+            if not crawl_time:
+                file_mtime = os.path.getmtime(pchome_file)
+                crawl_time = datetime.fromtimestamp(file_mtime).isoformat()
+            
+            file_info = {
+                'filename': 'crawler_results_pchome_onsale.json',
+                'filepath': pchome_file,
+                'keyword': 'PChome 促銷',
+                'total_products': pchome_data.get('total_products', len(pchome_data.get('products', []))),
+                'crawl_time': crawl_time,
+                'file_size': os.path.getsize(pchome_file),
+                'platform': 'pchome_onsale',
+                'products': pchome_data.get('products', [])
+            }
+            daily_deals.append(file_info)
+            print(f"PChome 資料: {file_info['total_products']} 個商品, 時間: {crawl_time}")
+            
         except Exception as e:
-            print(f"讀取 PChome 每日促銷檔案失敗: {e}")
+            print(f"讀取 PChome 檔案失敗: {e}")
     
-    # 處理 YAHOO RUSHBUY 商品
-    yahoo_file = os.path.join(results_dir, "crawler_results_yahoo_rushbuy.json")
+    # 直接讀取 Yahoo 秒殺檔案
+    yahoo_file = os.path.join(crawler_manager.output_dir, "crawler_results_yahoo_rushbuy.json")
     if os.path.exists(yahoo_file):
         try:
+            print(f"讀取 Yahoo 檔案: {yahoo_file}")
             with open(yahoo_file, 'r', encoding='utf-8-sig') as f:
-                data = json.load(f)
-                
-            if data.get('platform') == 'yahoo_rushbuy':
-                file_info = {
-                    'filename': os.path.basename(yahoo_file),
-                    'filepath': yahoo_file,
-                    'keyword': data.get('keyword', 'yahoo_rushbuy'),
-                    'total_products': data.get('total_products', 0),
-                    'crawl_time': data.get('crawl_time', data.get('timestamp', '')),
-                    'file_size': os.path.getsize(yahoo_file),
-                    'platform': 'yahoo_rushbuy',
-                    'products': data.get('products', [])
-                }
-                daily_deals.append(file_info)
+                yahoo_data = json.load(f)
+            
+            # 使用檔案的時間戳記或修改時間
+            crawl_time = yahoo_data.get('timestamp') or yahoo_data.get('crawl_time')
+            if not crawl_time:
+                file_mtime = os.path.getmtime(yahoo_file)
+                crawl_time = datetime.fromtimestamp(file_mtime).isoformat()
+            
+            file_info = {
+                'filename': 'crawler_results_yahoo_rushbuy.json',
+                'filepath': yahoo_file,
+                'keyword': 'Yahoo 秒殺',
+                'total_products': yahoo_data.get('total_products', len(yahoo_data.get('products', []))),
+                'crawl_time': crawl_time,
+                'file_size': os.path.getsize(yahoo_file),
+                'platform': 'yahoo_rushbuy',
+                'products': yahoo_data.get('products', [])
+            }
+            daily_deals.append(file_info)
+            print(f"Yahoo 資料: {file_info['total_products']} 個商品, 時間: {crawl_time}")
+            
         except Exception as e:
-            print(f"讀取 Yahoo 秒殺檔案失敗: {e}")    # 按時間排序（最新的在前面）
+            print(f"讀取 Yahoo 檔案失敗: {e}")
+    
+    # 按時間排序（最新的在前面）
     daily_deals.sort(key=lambda x: x.get('crawl_time', ''), reverse=True)
     
     # 支援平台過濾
@@ -301,16 +448,21 @@ def get_daily_deals():
         if platform not in platform_update_times:
             platform_update_times[platform] = deal.get('crawl_time', '')
     
+    # 獲取最新更新時間
+    latest_update = daily_deals[0]['crawl_time'] if daily_deals else ''
+    
+    print(f"回傳 {len(daily_deals)} 個平台資料, 總商品: {sum(deal['total_products'] for deal in daily_deals)}")
+    print(f"最新更新時間: {latest_update}")
+    
     return jsonify({
         'daily_deals': daily_deals,
         'total_deals': sum(deal['total_products'] for deal in daily_deals),
-        'latest_update': daily_deals[0]['crawl_time'] if daily_deals else '',
+        'latest_update': latest_update,
         'platform_updates': platform_update_times,
         'next_update_times': {
-            'morning': '08:00',
-            'afternoon': '14:00',
-            'evening': '20:00',
-            'night': '02:00'
+            'morning': '10:00',
+            'afternoon': '15:00', 
+            'evening': '21:00'
         },
         'status': 'success'
     })
@@ -320,7 +472,21 @@ def daily_deals_page():
     """每日促銷專頁"""
     return render_template('daily_deals.html')
 
-# 手動更新 API 已移除，使用 GitHub Actions 自動更新
+@app.route('/dashboard')
+def dashboard_page():
+    """系統儀表板"""
+    return render_template('dashboard.html')
+
+# 測試頁面路由
+@app.route('/api_test.html')
+def api_test_page():
+    """API 測試頁面"""
+    return render_template('api_test.html')
+
+@app.route('/image_test.html')
+def image_test_page():
+    """圖片測試頁面"""
+    return render_template('image_test.html')
 
 if __name__ == '__main__':
     # 確保templates和static目錄存在

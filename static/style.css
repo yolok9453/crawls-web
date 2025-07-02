@@ -118,10 +118,35 @@ body {
     object-position: center;
     transition: transform 0.3s ease;
     width: 100%;
+    background-color: #f8f9fa;
+    background-image: linear-gradient(45deg, #e9ecef 25%, transparent 25%), 
+                      linear-gradient(-45deg, #e9ecef 25%, transparent 25%), 
+                      linear-gradient(45deg, transparent 75%, #e9ecef 75%), 
+                      linear-gradient(-45deg, transparent 75%, #e9ecef 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    opacity: 1;
+    will-change: transform;
+}
+
+.product-card .card-img-top[src=""], 
+.product-card .card-img-top:not([src]) {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f8f9fa"/><text x="50" y="50" text-anchor="middle" dy=".3em" font-family="Arial" font-size="14" fill="%236c757d">載入中...</text></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 100px 100px;
 }
 
 .product-card:hover .card-img-top {
     transform: scale(1.05);
+}
+
+/* 圖片載入失敗時的樣式 */
+.product-card .card-img-top.error {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23f8f9fa"/><text x="50" y="45" text-anchor="middle" dy=".3em" font-family="Arial" font-size="12" fill="%236c757d">圖片載入失敗</text><text x="50" y="60" text-anchor="middle" dy=".3em" font-family="Arial" font-size="10" fill="%236c757d">點擊查看詳情</text></svg>');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 120px 80px;
 }
 
 .product-card .card-body {
@@ -549,4 +574,119 @@ body {
 @keyframes flicker {
     0%, 50% { opacity: 1; }
     51%, 100% { opacity: 0.8; }
+}
+
+/* 圖片載入優化 */
+img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+.loading-placeholder {
+    background: linear-gradient(90deg, #f0f0f0 25%, rgba(255,255,255,0.8) 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* 防止閃爍的過渡效果 */
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 圖片容器穩定高度 */
+.product-image-container {
+    position: relative;
+    height: 180px;
+    overflow: hidden;
+    background-color: #f8f9fa;
+}
+
+.product-image-container::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 3px solid #dee2e6;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    z-index: 1;
+}
+
+.product-image-container img {
+    position: relative;
+    z-index: 2;
+}
+
+@keyframes spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* 隱藏載入動畫當圖片載入完成 */
+.product-image-container img[style*="opacity: 1"] + ::before {
+    display: none;
+}
+
+/* 防止佈局偏移 */
+.card-img-top {
+    aspect-ratio: 4/3;
+    display: block;
+}
+
+/* 確保卡片高度一致 */
+.product-card {
+    min-height: 400px;
+}
+
+.product-card .card-body {
+    min-height: 120px;
+}
+
+/* 平滑的載入效果 */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.product-card {
+    animation: slideInUp 0.3s ease-out;
+}
+
+/* 減少圖片載入時的跳動 */
+.product-image {
+    display: block;
+    background-color: #f8f9fa;
+    background-image: 
+        linear-gradient(45deg, #e9ecef 25%, transparent 25%), 
+        linear-gradient(-45deg, #e9ecef 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #e9ecef 75%), 
+        linear-gradient(-45deg, transparent 75%, #e9ecef 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    background-repeat: repeat;
+}
+
+/* 圖片載入完成後隱藏背景圖案 */
+.product-image[src]:not([src=""]) {
+    background-image: none;
 }
