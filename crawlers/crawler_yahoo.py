@@ -141,4 +141,4 @@ def main(keyword: str, output_file: str = None, max_products: int = 100, min_pri
     print(f"結果已保存至 {output_file}")
 
 if __name__ == "__main__":
-    main("球鞋", max_products=5, min_price=0, max_price=5000)
+    main("日本IRIS鑽石經典款IH不沾鍋10件組", max_products=5, min_price=0, max_price=5000)

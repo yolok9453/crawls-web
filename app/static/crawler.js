@@ -101,9 +101,14 @@ async function startCrawl() {
   const selectedPlatforms = Array.from(
     document.querySelectorAll(".platform-checkbox:checked")
   ).map((cb) => cb.value);
-  const maxProducts = parseInt(document.getElementById("maxProducts").value);
-  const minPrice = parseInt(document.getElementById("minPrice").value);
-  const maxPrice = parseInt(document.getElementById("maxPrice").value);
+  
+  // 獲取其他參數，如果元素不存在則使用默認值
+  const maxProducts = document.getElementById("maxProducts") ? 
+    parseInt(document.getElementById("maxProducts").value) : 100;
+  const minPrice = document.getElementById("minPrice") ? 
+    parseInt(document.getElementById("minPrice").value) : 0;
+  const maxPrice = document.getElementById("maxPrice") ? 
+    parseInt(document.getElementById("maxPrice").value) : 999999;
 
   // 驗證輸入
   if (!keyword) {

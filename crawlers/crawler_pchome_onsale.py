@@ -11,7 +11,10 @@ import logging
 import re
 import json
 import os
+import sys
+import importlib.util
 from datetime import datetime
+from typing import List, Dict, Optional
 
 class PChomeOnsaleCrawler:
     def __init__(self, headless=True):
@@ -19,7 +22,37 @@ class PChomeOnsaleCrawler:
         self.driver = None
         self.base_url = "https://24h.pchome.com.tw"
         self.onsale_url = "https://24h.pchome.com.tw/onsale/"
+        self.other_crawlers = {}
         
+        # 載入其他爬蟲模組
+        self._load_other_crawlers()
+        
+    def _load_other_crawlers(self):
+        """載入其他平台的爬蟲模組"""
+        current_dir = os.path.dirname(__file__)
+        
+        # 要載入的爬蟲模組 (排除自己和特殊爬蟲)
+        crawler_modules = ['crawler_pchome.py', 'crawler_yahoo.py', 'crawler_routn.py', 'crawler_carrefour.py']
+        
+        for crawler_file in crawler_modules:
+            platform = crawler_file.replace('crawler_', '').replace('.py', '')
+            module_path = os.path.join(current_dir, crawler_file)
+            
+            if os.path.exists(module_path):
+                try:
+                    spec = importlib.util.spec_from_file_location(f"crawler_{platform}", module_path)
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                    
+                    if hasattr(module, 'run'):
+                        self.other_crawlers[platform] = module.run
+                        logging.info(f"成功載入爬蟲模組: {platform}")
+                    else:
+                        logging.warning(f"爬蟲模組 {platform} 沒有 run 函數")
+                        
+                except Exception as e:
+                    logging.warning(f"載入爬蟲模組 {platform} 失敗: {e}")
+    
     def setup_driver(self):
         """設置 Chrome WebDriver"""
         chrome_options = Options()
@@ -76,8 +109,14 @@ class PChomeOnsaleCrawler:
             logging.error("請確保已安裝 Chrome 瀏覽器，或下載 ChromeDriver 並放置在系統路徑中")
             return False
     
-    def crawl_onsale_products(self, max_products=None):
-        """爬取 PChome 線上購物特價商品頁面"""
+    def crawl_onsale_products(self, max_products=None, include_related=True, max_related_per_platform=3):
+        """爬取 PChome 線上購物特價商品頁面
+        
+        Args:
+            max_products: 最大商品數量
+            include_related: 是否包含其他平台的相關產品
+            max_related_per_platform: 每個平台最多搜尋的相關商品數量
+        """
         if not self.setup_driver():
             return []
         
@@ -103,6 +142,26 @@ class PChomeOnsaleCrawler:
             
             if max_products and len(products) > max_products:
                 products = products[:max_products]
+            
+            # 如果需要搜尋相關產品
+            if include_related and products:
+                logging.info("開始為每個商品搜尋其他平台的相關產品...")
+                for i, product in enumerate(products):
+                    try:
+                        logging.info(f"正在為商品 {i+1}/{len(products)} 搜尋相關產品: {product['title'][:30]}...")
+                        related_products = self._search_related_products(
+                            product['title'], 
+                            max_related_per_platform
+                        )
+                        product['related_products'] = related_products
+                        
+                        # 計算相關產品總數
+                        total_related = sum(len(prods) for prods in related_products.values())
+                        logging.info(f"為商品 '{product['title'][:30]}...' 找到 {total_related} 個相關產品")
+                        
+                    except Exception as e:
+                        logging.warning(f"為商品 {i+1} 搜尋相關產品時發生錯誤: {e}")
+                        product['related_products'] = {}
             
             logging.info(f"成功爬取到 {len(products)} 個商品")
             return products
@@ -286,7 +345,79 @@ class PChomeOnsaleCrawler:
             logging.warning(f"獲取圖片URL時發生錯誤: {e}")
             return ""
 
-def crawl_pchome_onsale(max_products=None, headless=True, save_json=True):
+    def _extract_keywords_from_title(self, title: str, max_keywords: int = 3) -> List[str]:
+        """從商品標題中提取關鍵字"""
+        # 移除常見的非關鍵字
+        stop_words = ['的', '了', '和', '與', '或', '但', '而', '等', '【', '】', '(', ')', 
+                     '官方', '正品', '現貨', '免運', '特價', '限時', '活動', '促銷', '優惠', '含']
+        
+        # 首先去除括號內容和特殊符號
+        cleaned_title = re.sub(r'【.*?】|\(.*?\)|\[.*?\]', '', title)
+        cleaned_title = re.sub(r'[^\w\s]', ' ', cleaned_title)
+        
+        # 分詞並過濾
+        words = cleaned_title.split()
+        keywords = []
+        
+        for word in words:
+            word = word.strip()
+            if (len(word) >= 2 and 
+                word not in stop_words and 
+                not word.isdigit() and
+                len(keywords) < max_keywords):
+                keywords.append(word)
+        
+        # 如果關鍵字太少，嘗試從原標題中提取品牌或型號
+        if len(keywords) < 2:
+            # 嘗試提取英文單詞或數字組合
+            english_words = re.findall(r'[A-Za-z]+[0-9]*|[0-9]+[A-Za-z]*', title)
+            if english_words:
+                keywords.extend(english_words[:max_keywords])
+            
+            # 如果還是沒有，使用原標題的前8個字符
+            if not keywords:
+                fallback_keyword = re.sub(r'[^\w]', '', title)[:8]
+                if fallback_keyword:
+                    keywords = [fallback_keyword]
+        
+        return keywords[:max_keywords]
+    
+    def _search_related_products(self, title: str, max_products_per_platform: int = 5) -> Dict[str, List[Dict]]:
+        """在其他平台搜尋相關商品"""
+        keywords = self._extract_keywords_from_title(title)
+        related_products = {}
+        
+        if not keywords:
+            return related_products
+        
+        # 使用第一個關鍵字進行搜尋
+        search_keyword = keywords[0]
+        logging.info(f"使用關鍵字 '{search_keyword}' 搜尋相關商品...")
+        
+        for platform, crawler_func in self.other_crawlers.items():
+            try:
+                logging.info(f"在 {platform} 平台搜尋相關商品...")
+                
+                # 設定較低的商品數量限制和較短的等待時間
+                products = crawler_func(
+                    keyword=search_keyword,
+                    max_products=max_products_per_platform,
+                    min_price=0,
+                    max_price=999999
+                )
+                
+                if products:
+                    related_products[platform] = products[:max_products_per_platform]
+                    logging.info(f"在 {platform} 找到 {len(products)} 個相關商品")
+                else:
+                    logging.info(f"在 {platform} 沒有找到相關商品")
+                    
+            except Exception as e:
+                logging.warning(f"在 {platform} 平台搜尋時發生錯誤: {e}")
+                related_products[platform] = []
+        
+        return related_products
+def crawl_pchome_onsale(max_products=None, headless=True, save_json=True, include_related=True, max_related_per_platform=3):
     """
     爬取 PChome 線上購物特價商品的主函數
     
@@ -294,12 +425,15 @@ def crawl_pchome_onsale(max_products=None, headless=True, save_json=True):
         max_products (int): 最大商品數量，None 表示爬取所有商品
         headless (bool): 是否使用無頭模式
         save_json (bool): 是否保存到 JSON 文件
+        include_related (bool): 是否包含其他平台的相關產品
+        max_related_per_platform (int): 每個平台最多搜尋的相關商品數量
     
     Returns:
         list: 商品資訊列表
     """
     crawler = PChomeOnsaleCrawler(headless=headless)
-    products = crawler.crawl_onsale_products(max_products)
+    products = crawler.crawl_onsale_products(max_products, include_related, max_related_per_platform)
+    products = products[:16]  # 限制最多返回 16 個商品
     
     # 如果指定要保存 JSON 且有商品資料，則保存
     if save_json and products:
@@ -309,7 +443,7 @@ def crawl_pchome_onsale(max_products=None, headless=True, save_json=True):
     
     return products
 
-def run(keyword=None, max_products=100, min_price=0, max_price=999999, save_json=True):
+def run(keyword=None, max_products=100, min_price=0, max_price=999999, save_json=True, include_related=True):
     """
     爬蟲管理器調用的統一介面函數
     
@@ -319,12 +453,19 @@ def run(keyword=None, max_products=100, min_price=0, max_price=999999, save_json
         min_price (int): 最低價格範圍
         max_price (int): 最高價格範圍
         save_json (bool): 是否保存到 JSON 文件
+        include_related (bool): 是否包含其他平台的相關產品
     
     Returns:
         list: 商品資訊列表
     """
     # 爬取 PChome 特價頁面商品，不進行複雜的價格解析
-    products = crawl_pchome_onsale(max_products=max_products, headless=True, save_json=save_json)
+    products = crawl_pchome_onsale(
+        max_products=max_products, 
+        headless=True, 
+        save_json=save_json,
+        include_related=include_related,
+        max_related_per_platform=3
+    )
     return products[:max_products]  # 確保不超過最大數量
 
 def save_to_json(products, keyword="pchome_onsale"):
@@ -369,21 +510,101 @@ def save_to_json(products, keyword="pchome_onsale"):
         logging.error(f"保存 JSON 文件時發生錯誤: {e}")
         return None
 
+def crawl_onsale_with_related_products(max_products=10, max_related_per_platform=3):
+    """
+    專門為 web 應用提供的爬取函數，包含相關產品搜尋
+    
+    Args:
+        max_products (int): 最大商品數量
+        max_related_per_platform (int): 每個平台最多搜尋的相關商品數量
+    
+    Returns:
+        dict: 包含商品和統計資訊的結果
+    """
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    
+    try:
+        # 爬取特價商品並包含相關產品
+        products = crawl_pchome_onsale(
+            max_products=max_products,
+            headless=True,
+            save_json=True,
+            include_related=True,
+            max_related_per_platform=max_related_per_platform
+        )
+        
+        # 統計相關產品數量
+        total_related = 0
+        platforms_found = set()
+        
+        for product in products:
+            if 'related_products' in product:
+                for platform, related_list in product['related_products'].items():
+                    if related_list:
+                        total_related += len(related_list)
+                        platforms_found.add(platform)
+        
+        result = {
+            "success": True,
+            "timestamp": datetime.now().isoformat(),
+            "main_products": len(products),
+            "total_related_products": total_related,
+            "platforms_searched": list(platforms_found),
+            "products": products
+        }
+        
+        return result
+        
+    except Exception as e:
+        logging.error(f"爬取過程中發生錯誤: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+            "main_products": 0,
+            "total_related_products": 0,
+            "platforms_searched": [],
+            "products": []
+        }
+
 if __name__ == "__main__":
     # 測試爬蟲
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    
+    print("=== PChome 特價商品爬蟲測試 ===")
+    print("選擇測試模式:")
+    print("1. 僅爬取特價商品")
+    print("2. 爬取特價商品 + 其他平台相關產品")
+    
+    choice = input("請選擇 (1 或 2，預設為 1): ").strip()
+    include_related = (choice == "2")
+    
+    if include_related:
+        print("將會爬取特價商品並搜尋其他平台的相關產品，這可能需要較長時間...")
     
     # 爬取商品並保存到 JSON
-    products = crawl_pchome_onsale(max_products=100, headless=False, save_json=True)
+    products = crawl_pchome_onsale(
+        max_products=5,  # 測試時減少商品數量
+        headless=False, 
+        save_json=True,
+        include_related=include_related,
+        max_related_per_platform=2  # 每個平台最多2個相關商品
+    )
     
+    print(f"\n=== 爬取結果 ===")
     print(f"找到 {len(products)} 個商品:")
-    for i, product in enumerate(products[:5], 1):
-        print(f"{i}. {product['title']}")
+    
+    for i, product in enumerate(products, 1):
+        print(f"\n{i}. {product['title']}")
         print(f"   價格: {product['price']}")
         print(f"   連結: {product['url']}")
-        print(f"   圖片: {product['image_url']}")
-        print()
+        
+        if 'related_products' in product and product['related_products']:
+            print(f"   相關產品:")
+            for platform, related_list in product['related_products'].items():
+                if related_list:
+                    print(f"     {platform.upper()}: {len(related_list)} 個商品")
+                    for j, related in enumerate(related_list[:2], 1):  # 只顯示前2個
+                        print(f"       {j}. {related.get('title', 'N/A')[:40]}...")
     
-    if len(products) > 5:
-        print(f"... 還有 {len(products) - 5} 個商品")
-        print("完整資料已保存到 JSON 文件中")
+    print(f"\n完整資料已保存到 JSON 文件中")

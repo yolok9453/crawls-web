@@ -4,9 +4,24 @@ let filteredResults = [];
 
 // 頁面載入完成後初始化
 document.addEventListener("DOMContentLoaded", function () {
+  console.log("頁面載入完成，開始初始化...");
   loadResults();
   loadPlatforms();
   loadDailyDealsStats(); // 載入每日促銷統計
+  
+  // 添加調試信息
+  setTimeout(() => {
+    console.log("5秒後檢查載入狀態...");
+    const spinner = document.getElementById("loadingSpinner");
+    const table = document.querySelector(".table-responsive");
+    const emptyMessage = document.getElementById("emptyMessage");
+    
+    console.log("載入動畫顯示狀態:", spinner?.style.display);
+    console.log("表格顯示狀態:", table?.style.display);
+    console.log("空訊息顯示狀態:", emptyMessage?.style.display);
+    console.log("所有結果數量:", allResults.length);
+    console.log("過濾結果數量:", filteredResults.length);
+  }, 5000);
 });
 
 // 載入所有結果
@@ -15,13 +30,19 @@ async function loadResults() {
 
   try {
     const response = await fetch("/api/results");
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
     const data = await response.json();
 
     if (data.status === "success") {
-      allResults = data.files;
+      allResults = data.files || [];
       filteredResults = [...allResults];
       updateUI();
       updateStatistics();
+      console.log(`成功載入 ${allResults.length} 個結果`);
     } else {
       console.error("載入結果失敗:", data.error);
       showEmptyMessage();
@@ -99,11 +120,9 @@ function createResultRow(result) {
   // 格式化時間
   const crawlTime = new Date(result.crawl_time).toLocaleString("zh-TW");
 
-  // 格式化檔案大小
-  const fileSize = formatFileSize(result.file_size);
-
   // 平台標籤
-  const platformBadges = result.platforms
+  const platforms = result.platforms ? result.platforms.split(',') : [];
+  const platformBadges = platforms
     .map(
       (platform) =>
         `<span class="badge bg-secondary me-1">${platform.toUpperCase()}</span>`
@@ -124,23 +143,21 @@ function createResultRow(result) {
             <small class="text-muted">${crawlTime}</small>
         </td>
         <td>
-            <small class="text-muted">${fileSize}</small>
+            <span class="badge ${result.status === 'success' ? 'bg-success' : 'bg-warning'}">${result.status}</span>
         </td>
         <td>
             <div class="btn-group btn-group-sm" role="group">
-                <button class="btn btn-outline-primary" onclick="viewResult('${
-                  result.filename
-                }')" title="查看詳細">
+                <button class="btn btn-outline-primary" onclick="viewResult(${
+                  result.id
+                })" title="查看詳細">
                     <i class="fas fa-eye"></i>
                 </button>
-                <button class="btn btn-outline-info" onclick="showStatistics('${
-                  result.filename
-                }')" title="統計資訊">
+                <button class="btn btn-outline-info" onclick="showStatistics(${
+                  result.id
+                })" title="統計資訊">
                     <i class="fas fa-chart-bar"></i>
                 </button>
-                <button class="btn btn-outline-success" onclick="downloadResult('${
-                  result.filename
-                }')" title="下載">
+                <button class="btn btn-outline-secondary" onclick="downloadResult()" title="下載功能已停用" disabled>
                     <i class="fas fa-download"></i>
                 </button>
             </div>
@@ -161,7 +178,9 @@ function updateStatistics() {
   // 獲取唯一平台數
   const allPlatforms = new Set();
   allResults.forEach((result) => {
-    result.platforms.forEach((platform) => allPlatforms.add(platform));
+    if (result.platforms) {
+        result.platforms.split(',').forEach((platform) => allPlatforms.add(platform));
+    }
   });
 
   // 最新爬蟲時間
@@ -186,7 +205,7 @@ function applyFilters() {
   filteredResults = allResults.filter((result) => {
     const matchKeyword =
       !keyword || result.keyword.toLowerCase().includes(keyword);
-    const matchPlatform = !platform || result.platforms.includes(platform);
+    const matchPlatform = !platform || (result.platforms && result.platforms.includes(platform));
 
     return matchKeyword && matchPlatform;
   });
@@ -201,14 +220,14 @@ function refreshResults() {
 }
 
 // 查看結果詳細
-function viewResult(filename) {
-  window.location.href = `/view/${filename}`;
+function viewResult(session_id) {
+  window.location.href = `/view/${session_id}`;
 }
 
 // 顯示統計資訊
-async function showStatistics(filename) {
+async function showStatistics(session_id) {
   try {
-    const response = await fetch(`/api/statistics/${filename}`);
+    const response = await fetch(`/api/statistics/${session_id}`);
     const data = await response.json();
 
     if (data.status === "success") {
@@ -230,11 +249,9 @@ async function showStatistics(filename) {
                     <div class="col-md-6">
                         <h6>價格統計</h6>
                         <ul class="list-unstyled">
-                            <li><strong>平均價格:</strong> NT$ ${stats.price_stats.average.toFixed(
-                              2
-                            )}</li>
-                            <li><strong>最低價格:</strong> NT$ ${stats.price_stats.min.toLocaleString()}</li>
-                            <li><strong>最高價格:</strong> NT$ ${stats.price_stats.max.toLocaleString()}</li>
+                            <li><strong>平均價格:</strong> NT$ ${stats.price_stats.average ? stats.price_stats.average.toFixed(2) : 'N/A'}</li>
+                            <li><strong>最低價格:</strong> NT$ ${stats.price_stats.min ? stats.price_stats.min.toLocaleString() : 'N/A'}</li>
+                            <li><strong>最高價格:</strong> NT$ ${stats.price_stats.max ? stats.price_stats.max.toLocaleString() : 'N/A'}</li>
                         </ul>
                     </div>
                 </div>
@@ -245,26 +262,18 @@ async function showStatistics(filename) {
                         <thead>
                             <tr>
                                 <th>平台</th>
-                                <th>狀態</th>
                                 <th>商品數量</th>
-                                <th>執行時間</th>
+                                <th>平均價格</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${Object.entries(stats.platforms)
                               .map(
-                                ([platform, data]) => `
+                                ([platform, p_data]) => `
                                 <tr>
                                     <td><span class="badge bg-secondary">${platform.toUpperCase()}</span></td>
-                                    <td>
-                                        ${
-                                          data.status === "success"
-                                            ? '<i class="fas fa-check-circle text-success"></i> 成功'
-                                            : '<i class="fas fa-times-circle text-danger"></i> 失敗'
-                                        }
-                                    </td>
-                                    <td>${data.product_count.toLocaleString()}</td>
-                                    <td>${data.execution_time.toFixed(2)}s</td>
+                                    <td>${p_data.product_count.toLocaleString()}</td>
+                                    <td>${p_data.average_price ? p_data.average_price.toFixed(2) : 'N/A'}</td>
                                 </tr>
                             `
                               )
@@ -283,13 +292,11 @@ async function showStatistics(filename) {
   }
 }
 
-// 下載結果
-function downloadResult(filename) {
-  const link = document.createElement("a");
-  link.href = `/api/result/${filename}`;
-  link.download = filename;
-  link.click();
+// 下載結果 (功能已改變)
+function downloadResult() {
+  alert("下載功能已停用。所有數據現在統一儲存在資料庫中。");
 }
+
 
 // 顯示載入狀態
 function showLoading(show) {
@@ -307,8 +314,13 @@ function showLoading(show) {
 
 // 顯示空訊息
 function showEmptyMessage() {
-  document.getElementById("emptyMessage").style.display = "block";
-  document.querySelector(".table-responsive").style.display = "none";
+  const spinner = document.getElementById("loadingSpinner");
+  const table = document.querySelector(".table-responsive");
+  const emptyMessage = document.getElementById("emptyMessage");
+  
+  if (spinner) spinner.style.display = "none";
+  if (table) table.style.display = "none";
+  if (emptyMessage) emptyMessage.style.display = "block";
 }
 
 // 格式化檔案大小
@@ -342,4 +354,84 @@ document
 
 function goToDailyDeals() {
   window.location.href = "/daily-deals";
+}
+
+// 批量過濾功能
+async function batchFilterResults() {
+  const filterBtn = document.getElementById('batchFilterBtn');
+  
+  // 確認對話框
+  if (!confirm('確定要批量過濾所有爬蟲結果嗎？這可能需要一些時間。')) {
+    return;
+  }
+  
+  // 顯示載入中
+  if (filterBtn) {
+    filterBtn.disabled = true;
+    filterBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>批量過濾中...';
+  }
+
+  try {
+    const response = await fetch('/api/products/filter-all', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.status === 'success') {
+      let message = `批量過濾完成！\n\n`;
+      message += `處理檔案數: ${result.total_files}\n`;
+      message += `總計商品: ${result.overall_statistics.total_original} → ${result.overall_statistics.total_filtered}\n`;
+      message += `移除商品: ${result.overall_statistics.total_removed} 個 (${result.overall_statistics.overall_removal_rate}%)\n\n`;
+      
+      message += `詳細結果:\n`;
+      result.filtered_files.forEach((file, index) => {
+        if (file.status === 'success') {
+          message += `${index + 1}. ${file.keyword}: ${file.original_count} → ${file.filtered_count} (-${file.removed_count})\n`;
+        } else {
+          message += `${index + 1}. ${file.input_file}: 失敗 - ${file.error}\n`;
+        }
+      });
+
+      showAlert('批量過濾完成', message, 'success');
+      
+      // 重新載入結果列表
+      loadResults();
+    } else {
+      showAlert('批量過濾失敗', result.error || '未知錯誤', 'error');
+    }
+  } catch (error) {
+    console.error('批量過濾請求失敗:', error);
+    showAlert('批量過濾失敗', '網路請求失敗，請稍後再試', 'error');
+  } finally {
+    // 恢復按鈕狀態
+    if (filterBtn) {
+      filterBtn.disabled = false;
+      filterBtn.innerHTML = '<i class="fas fa-magic me-2"></i>批量過濾';
+    }
+  }
+}
+
+// 顯示提示訊息
+function showAlert(title, message, type = 'info') {
+  const alertClass = type === 'error' ? 'alert-danger' : 
+                    type === 'success' ? 'alert-success' : 
+                    'alert-info';
+  
+  const alertHtml = `
+    <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+      <h6 class="alert-heading mb-2">${title}</h6>
+      <p class="mb-0" style="white-space: pre-line;">${message}</p>
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  `;
+  
+  // 在頁面頂部顯示提示
+  const container = document.querySelector('.container');
+  if (container) {
+    container.insertAdjacentHTML('afterbegin', alertHtml);
+  }
 }
