@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>結果詳情 - 爬蟲結果展示系統</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <style>
+        .badge {
+            font-size: 0.8rem;
+            padding: 0.25em 0.6em;
+        }
+        .platform-carrefour { background-color: #004b9d !important; }
+        .platform-pchome { background-color: #e53012 !important; }
+        .platform-routn { background-color: #ff5722 !important; }
+        .platform-yahoo { background-color: #6001d1 !important; }
+    </style>
+</head>
+
+<body>
+    <!-- 導航欄 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-spider me-2"></i>爬蟲結果展示系統
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">首頁</a>
+                <a class="nav-link" href="/crawler">執行爬蟲</a>
+                <a class="nav-link" href="/daily-deals">每日優惠</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- 載入中 -->
+        <div id="loadingSpinner" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">載入中...</span>
+            </div>
+            <p class="mt-2">正在載入結果詳情...</p>
+        </div>
+
+        <!-- 主要內容 -->
+        <div id="mainContent" style="display: none;">
+            <!-- 標題和基本資訊 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h1 id="resultTitle"><i class="fas fa-search me-2"></i>關鍵字結果</h1>
+                            <p class="text-muted mb-0" id="resultSubtitle">任務 ID: {{ session_id }}</p>
+                        </div>
+                        <div>
+                            <button class="btn btn-outline-primary" onclick="window.history.back()">
+                                <i class="fas fa-arrow-left me-2"></i>返回
+                            </button>
+                            <button class="btn btn-warning me-2" id="filterBtn" onclick="filterCurrentResult()">
+                                <i class="fas fa-filter me-2"></i>智能過濾
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 摘要卡片 -->
+            <div class="row mb-4" id="summaryCards">
+                <!-- 由 JavaScript 填入 -->
+            </div>
+
+            <!-- 過濾和排序 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label for="platformFilter" class="form-label">平台篩選</label>
+                            <select class="form-select" id="platformFilter">
+                                <option value="all" selected>全部平台</option>
+                                <option value="carrefour">家樂福</option>
+                                <option value="pchome">PChome</option>
+                                <option value="routn">露天</option>
+                                <option value="yahoo">Yahoo</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3 mb-md-0">
+                            <label for="sortSelect" class="form-label">商品排序</label>
+                            <select class="form-select" id="sortSelect">
+                                <option value="price-asc" selected>價格由低至高</option>
+                                <option value="price-desc">價格由高至低</option>
+                                <option value="title">商品名稱</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">商品筆數</label>
+                            <p class="form-control-plaintext"><strong id="productCount">0</strong> 個商品</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 商品表格 -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 100px">商品圖</th>
+                                    <th>商品資訊</th>
+                                    <th style="width: 120px" class="text-end">價格</th>
+                                    <th style="width: 100px">連結</th>
+                                    <th style="width: 100px">比較</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productTableBody">
+                                <!-- 商品列表將由 JavaScript 動態填充 -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- 分頁 -->
+                    <nav aria-label="商品分頁" class="mt-4">
+                        <ul class="pagination justify-content-center" id="pagination">
+                            <!-- 分頁控制將由 JavaScript 動態填充 -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div> <!-- 主要內容結束 -->
+    </div> <!-- container 結束 -->
+
+    <!-- Bootstrap 和 JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='result_detail_fixed.js') }}"></script>
+    
+    <!-- 調試信息 -->
+    <script>
+        console.log("模板載入完成，session_id: {{ session_id }}");
+        
+        // 添加錯誤處理
+        window.addEventListener('error', function(e) {
+            console.error('全局錯誤:', e.message, e.filename, e.lineno);
+        });
+    </script>
+</body>
+
+</html>

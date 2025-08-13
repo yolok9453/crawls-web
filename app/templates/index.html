@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>爬蟲結果展示系統</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-spider me-2"></i>爬蟲結果展示系統
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">首頁</a>
+                <a class="nav-link" href="/crawler">執行爬蟲</a>
+                <a class="nav-link" href="/daily-deals">每日促銷</a>
+                <a class="nav-link" href="/debug-daily-deals">🔧 調試工具</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1><i class="fas fa-database me-2"></i>爬蟲結果管理</h1>
+                    <div>
+                        <a href="/crawler" class="btn btn-success">
+                            <i class="fas fa-play me-2"></i>執行新爬蟲
+                        </a>
+                        <button class="btn btn-warning me-2" id="batchFilterBtn" onclick="batchFilterResults()">
+                            <i class="fas fa-magic me-2"></i>批量過濾
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="refreshResults()">
+                            <i class="fas fa-sync-alt me-2"></i>重新整理
+                        </button>
+                    </div>
+                </div>                <!-- 統計卡片 -->
+                <div class="row mb-4" id="statsCards">
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h4 class="card-title" id="totalFiles">-</h4>
+                                        <p class="card-text">總結果檔案</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-file-alt fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h4 class="card-title" id="totalProducts">-</h4>
+                                        <p class="card-text">總商品數</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-shopping-cart fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h4 class="card-title" id="totalPlatforms">-</h4>
+                                        <p class="card-text">支援平台</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-globe fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h4 class="card-title" id="latestCrawl">-</h4>
+                                        <p class="card-text">最新爬蟲</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-clock fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 每日促銷卡片 -->
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div class="card bg-danger text-white daily-deals-card" style="cursor: pointer;" onclick="goToDailyDeals()">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h4 class="card-title" id="dailyDealsCount">-</h4>
+                                        <p class="card-text">每日促銷</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-fire fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 執行新爬蟲卡片 -->
+                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                        <div class="card bg-secondary text-white" style="cursor: pointer;" onclick="window.location.href='/crawler'">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <h4 class="card-title">
+                                            <i class="fas fa-plus"></i>
+                                        </h4>
+                                        <p class="card-text">執行爬蟲</p>
+                                    </div>
+                                    <div class="align-self-center">
+                                        <i class="fas fa-play fa-2x"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 搜尋和篩選 -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="searchKeyword" class="form-label">搜尋關鍵字</label>
+                                <input type="text" class="form-control" id="searchKeyword" placeholder="輸入關鍵字...">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="filterPlatform" class="form-label">篩選平台</label>
+                                <select class="form-select" id="filterPlatform">
+                                    <option value="">全部平台</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label>&nbsp;</label>
+                                <button class="btn btn-outline-secondary d-block w-100" onclick="applyFilters()">
+                                    <i class="fas fa-filter me-2"></i>篩選
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 結果列表 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-list me-2"></i>爬蟲結果列表</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="loadingSpinner" class="text-center" style="display: none;">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">載入中...</span>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="resultsTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>關鍵字</th>
+                                        <th>商品數量</th>
+                                        <th>平台</th>
+                                        <th>爬蟲時間</th>
+                                        <th>檔案大小</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resultsTableBody">
+                                    <!-- 動態生成內容 -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div id="emptyMessage" class="text-center text-muted" style="display: none;">
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <p>目前沒有爬蟲結果</p>
+                            <a href="/crawler" class="btn btn-primary">執行第一次爬蟲</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模態框 - 統計詳情 -->
+    <div class="modal fade" id="statsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">詳細統計</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="statsModalBody">
+                    <!-- 動態生成內容 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+</body>
+
+</html>
