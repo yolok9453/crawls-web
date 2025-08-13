@@ -11,7 +11,6 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 import brotli
 import traceback
 import logging
@@ -25,7 +24,13 @@ def get_cookies_and_token() -> tuple:
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    # 使用環境變數或系統預設的 ChromeDriver 路徑
+    chromedriver_path = os.environ.get('CHROMEDRIVER_PATH')
+    if chromedriver_path and os.path.exists(chromedriver_path):
+        driver = webdriver.Chrome(service=Service(chromedriver_path), options=options)
+    else:
+        # 嘗試系統預設路徑
+        driver = webdriver.Chrome(options=options)
     
     try:
         print("正在訪問 Yahoo 秒殺時時樂頁面...")

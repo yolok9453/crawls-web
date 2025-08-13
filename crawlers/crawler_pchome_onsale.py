@@ -5,7 +5,6 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
-from webdriver_manager.chrome import ChromeDriverManager
 import time
 import logging
 import re
@@ -65,16 +64,14 @@ class PChomeOnsaleCrawler:
         chrome_options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
         
         try:
-            # 方法1: 使用 webdriver-manager 自動管理 ChromeDriver
-            try:
-                from webdriver_manager.chrome import ChromeDriverManager
-                service = Service(ChromeDriverManager().install())
+            # 優先使用環境變數或系統路徑中的 ChromeDriver
+            chromedriver_path = os.environ.get('CHROMEDRIVER_PATH')
+            if chromedriver_path and os.path.exists(chromedriver_path):
+                service = Service(chromedriver_path)
                 self.driver = webdriver.Chrome(service=service, options=chrome_options)
-                logging.info("使用 webdriver-manager 成功設置 WebDriver")
-            except Exception as wdm_error:
-                logging.warning(f"webdriver-manager 失敗: {wdm_error}")
-                
-                # 方法2: 嘗試使用系統路徑中的 chromedriver
+                logging.info(f"使用環境變數 ChromeDriver 成功設置 WebDriver: {chromedriver_path}")
+            else:
+                # 嘗試使用系統路徑中的 chromedriver
                 try:
                     self.driver = webdriver.Chrome(options=chrome_options)
                     logging.info("使用系統路徑中的 ChromeDriver 成功設置 WebDriver")
