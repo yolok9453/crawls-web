@@ -168,7 +168,7 @@ jobs:
         print('開始執行 PChome OnSale 爬蟲...')
         pchome_count = 0
         try:
-            pchome_products = run_pchome(keyword='pchome_onsale', max_products=50)  # 減少數量避免超時
+            pchome_products = run_pchome(keyword='pchome_onsale', max_products=200)  # 恢復原來數量
             
             if pchome_products:
                 # 將資料存入 SQLite 資料庫
@@ -214,7 +214,7 @@ jobs:
         print('開始執行 Yahoo 秒殺爬蟲...')
         yahoo_count = 0
         try:
-            yahoo_products = run_yahoo(keyword='yahoo_rushbuy', max_products=50)  # 減少數量避免超時
+            yahoo_products = run_yahoo(keyword='yahoo_rushbuy', max_products=150)  # 恢復原來數量
             
             if yahoo_products:
                 # 將資料存入 SQLite 資料庫
