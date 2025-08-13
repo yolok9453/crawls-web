@@ -13,8 +13,120 @@ class ProductComparisonCacheService:
         self.crawler_manager = crawler_manager
         self.product_comparison_service = product_comparison_service
     
+    def get_candidate_products_from_database(self, target_product):
+        """從已爬取的資料庫中獲取候選商品，不重新爬取"""
+        try:
+            target_title = target_product.get('title', '')
+            target_platform = target_product.get('platform', '')
+            
+            # 提取關鍵詞用於資料庫搜尋
+            keywords_to_remove = ['【', '】', '★', '☆', '▶', '▷', '※', '◆', '◇', '■', '□', 
+                                 '限時', '特價', '促銷', '優惠', '折扣', '免運', '現貨', '熱銷',
+                                 '新款', '2024', '2025', '正品', '官方', '代理', '公司貨']
+            
+            search_keyword = target_title
+            for remove_word in keywords_to_remove:
+                search_keyword = search_keyword.replace(remove_word, '')
+            
+            # 進一步簡化關鍵詞
+            if '(' in search_keyword:
+                search_keyword = search_keyword.split('(')[0].strip()
+            elif '（' in search_keyword:
+                search_keyword = search_keyword.split('（')[0].strip()
+            
+            # 提取品牌或主要關鍵詞
+            words = search_keyword.strip().split()
+            if len(words) > 1:
+                # 取前2-3個關鍵詞
+                key_words = words[:3]
+            else:
+                key_words = words
+            
+            print(f"🔍 從資料庫搜尋關鍵詞: {key_words}")
+            
+            candidate_products = []
+            conn = get_db_connection()
+            
+            # 從 daily_deals 表搜尋（排除自己）
+            for keyword in key_words:
+                if len(keyword) >= 2:  # 只搜尋長度>=2的關鍵詞
+                    cursor = conn.execute("""
+                        SELECT title, platform, price, url, image_url, 'daily_deals' as source_table
+                        FROM daily_deals 
+                        WHERE title LIKE ? AND platform != ?
+                        ORDER BY crawl_time DESC
+                        LIMIT 50
+                    """, (f'%{keyword}%', target_platform))
+                    
+                    results = cursor.fetchall()
+                    for row in results:
+                        candidate_product = {
+                            'title': row['title'],
+                            'platform': row['platform'],
+                            'price': row['price'],
+                            'url': row['url'],
+                            'image_url': row['image_url'],
+                            'source_table': row['source_table']
+                        }
+                        # 避免重複
+                        if not any(p['url'] == candidate_product['url'] for p in candidate_products):
+                            candidate_products.append(candidate_product)
+            
+            # 從 products 表搜尋（如果 daily_deals 結果不足）
+            if len(candidate_products) < 20:
+                for keyword in key_words:
+                    if len(keyword) >= 2:
+                        cursor = conn.execute("""
+                            SELECT title, platform, price, url, image_url, 'products' as source_table
+                            FROM products 
+                            WHERE title LIKE ? AND platform != ?
+                            ORDER BY id DESC
+                            LIMIT 30
+                        """, (f'%{keyword}%', target_platform))
+                        
+                        results = cursor.fetchall()
+                        for row in results:
+                            candidate_product = {
+                                'title': row['title'],
+                                'platform': row['platform'],
+                                'price': row['price'],
+                                'url': row['url'],
+                                'image_url': row['image_url'],
+                                'source_table': row['source_table']
+                            }
+                            # 避免重複
+                            if not any(p['url'] == candidate_product['url'] for p in candidate_products):
+                                candidate_products.append(candidate_product)
+            
+            conn.close()
+            
+            print(f"📊 從資料庫找到 {len(candidate_products)} 個候選商品")
+            return candidate_products[:50]  # 限制數量
+            
+        except Exception as e:
+            print(f"從資料庫獲取候選商品時發生錯誤: {e}")
+            return []
+    
     def get_candidate_products_for_comparison(self, target_product):
-        """獲取用於比較的候選商品"""
+        """獲取用於比較的候選商品 - 優先使用資料庫搜尋"""
+        try:
+            # 首先從資料庫搜尋
+            candidate_products = self.get_candidate_products_from_database(target_product)
+            
+            if len(candidate_products) >= 5:  # 如果資料庫有足夠的候選商品
+                print(f"✅ 使用資料庫搜尋結果: {len(candidate_products)} 個候選商品")
+                return candidate_products
+            
+            # 如果資料庫結果不足，才進行即時爬取（作為備用）
+            print(f"⚠️ 資料庫候選商品不足({len(candidate_products)}個)，使用即時爬取作為補充...")
+            return self.get_candidate_products_from_crawling(target_product)
+            
+        except Exception as e:
+            print(f"獲取候選商品時發生錯誤: {e}")
+            return []
+    
+    def get_candidate_products_from_crawling(self, target_product):
+        """從即時爬取獲取候選商品（備用方法）"""
         try:
             target_title = target_product.get('title', '')
             

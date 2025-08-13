@@ -75,6 +75,7 @@ def check_database_update_time():
 def auto_sync_if_needed(max_age_hours=1):
     """
     如果本地資料庫太舊，自動同步
+    返回 True 如果有下載更新，False 如果不需要更新
     """
     try:
         update_time = check_database_update_time()
@@ -92,7 +93,7 @@ def auto_sync_if_needed(max_age_hours=1):
             return download_latest_database()
         else:
             print(f"✅ 本地資料庫夠新（{age_hours:.1f} 小時前），無需同步")
-            return True
+            return False
             
     except Exception as e:
         print(f"❌ 自動同步檢查失敗: {e}")
