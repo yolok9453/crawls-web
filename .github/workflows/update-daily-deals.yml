@@ -50,7 +50,6 @@ jobs:
         export DISPLAY=:99
         
         # 手動安裝 ChromeDriver (不使用 webdriver-manager)
-        echo "手動安裝 ChromeDriver..."
         echo "嘗試安裝 ChromeDriver..."
         
         # 方法1: 使用 apt 安裝 chromium-chromedriver
