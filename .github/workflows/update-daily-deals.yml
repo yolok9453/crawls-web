@@ -49,10 +49,8 @@ jobs:
         sudo Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
         export DISPLAY=:99
         
-        # 安裝 ChromeDriver (使用多種方法確保成功)
-        pip install webdriver-manager
-        
-        # 嘗試手動安裝 ChromeDriver
+        # 手動安裝 ChromeDriver (不使用 webdriver-manager)
+        echo "手動安裝 ChromeDriver..."
         echo "嘗試安裝 ChromeDriver..."
         
         # 方法1: 使用 apt 安裝 chromium-chromedriver
