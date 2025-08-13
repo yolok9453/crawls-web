@@ -54,6 +54,9 @@ logs/
 *.sqlite
 *.sqlite3
 
+# Allow crawler database
+!data/crawler_data.db
+
 # Environment variables
 .env
 .env.local
