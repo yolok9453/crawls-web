@@ -1,6 +1,7 @@
 import requests
 import json
 import time
+import re
 from typing import List, Dict
 import uuid
 from urllib.parse import quote
@@ -19,70 +20,136 @@ def get_headers() -> Dict:
         "sec-ch-ua-platform": '"Windows"'
     }
 
+def extract_price(price_text: str) -> int:
+    """從價格文字中提取數字"""
+    if not price_text:
+        return 0
+    # 使用正則表達式提取數字
+    numbers = re.findall(r'[\d,]+', price_text.replace(',', ''))
+    if numbers:
+        try:
+            return int(numbers[0])
+        except:
+            return 0
+    return 0
+
+def api_method(keyword: str, max_products: int, min_price: int, max_price: int) -> List[Dict]:
+    """使用 API 方法爬取 PChome 商品"""
+    print("🔄 使用 PChome API 方法...")
+    
+    products = []
+    page = 1
+    
+    while len(products) < max_products:
+        try:
+            # 構建 API 請求
+            url = "https://ecshweb.pchome.com.tw/search/v3.3/all/results"
+            params = {
+                "q": keyword,
+                "page": page,
+                "size": min(20, max_products - len(products)),
+                "sort": "sale/dc"
+            }
+            
+            print(f"   正在爬取第 {page} 頁...")
+            
+            response = requests.get(url, params=params, headers=get_headers(), timeout=10)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # 提取商品資訊
+            if 'prods' in data:
+                prods = data['prods']
+                if not prods:
+                    break
+                
+                page_products = []
+                for prod in prods:
+                    product_info = extract_product_info_api(prod)
+                    if product_info:
+                        # 價格過濾
+                        price = product_info.get('price', 0)
+                        if min_price <= price <= max_price:
+                            page_products.append(product_info)
+                
+                print(f"   第 {page} 頁找到 {len(page_products)} 個商品")
+                products.extend(page_products)
+                
+                if len(page_products) < 20:  # 如果少於 20 個，說明已經是最後一頁
+                    break
+                    
+                page += 1
+            else:
+                break
+                
+        except requests.exceptions.RequestException as e:
+            print(f"❌ API 請求失敗: {e}")
+            break
+        except Exception as e:
+            print(f"❌ 解析 API 回應失敗: {e}")
+            break
+    
+    # 去重複
+    unique_products = []
+    seen_urls = set()
+    
+    for product in products:
+        if product.get('url') and product['url'] not in seen_urls:
+            seen_urls.add(product['url'])
+            unique_products.append(product)
+    
+    print(f"✅ API 方法成功獲取 {len(unique_products)} 個商品")
+    return unique_products
+
+def extract_product_info_api(prod_data: Dict) -> Dict:
+    """從 API 回應中提取商品資訊"""
+    try:
+        # 提取基本資訊
+        product_id = prod_data.get('Id', '')  # 注意是大寫的 Id
+        title = prod_data.get('name', '')
+        price = prod_data.get('price', 0)
+        
+        # 處理價格
+        if isinstance(price, str):
+            price = extract_price(price)
+        
+        # 構建 URL
+        url = f"https://24h.pchome.com.tw/prod/{product_id}" if product_id else ""
+        
+        # 構建圖片 URL
+        pic_b = prod_data.get('picB', '')
+        image_url = f"https://cs-a.ecimg.tw{pic_b}" if pic_b else ""  # 移除 /items/ 前綴
+        
+        return {
+            "title": title,
+            "price": int(price) if price else 0,
+            "image_url": image_url,
+            "url": url,
+            "platform": "PChome"
+        }
+        
+    except Exception as e:
+        return {}
+
 def run(keyword: str, max_products: int = 100, min_price: int = 0, max_price: int = 999999) -> List[Dict]:
-    """爬取PChome商品
-        (發送PChome API請求，獲取商品清單，處理分頁)
+    """爬取PChome商品 - 純 API 方法
+    
     Args:
         keyword (str): 搜索關鍵字
         max_products (int, optional): 最大商品數量限制. Defaults to 100.
+        min_price (int): 最小價格過濾
+        max_price (int): 最大價格過濾
 
     Returns:
         List[Dict]: 商品資訊列表
     """
-    encoded_keyword = quote(keyword)
-    base_url = f"https://ecshweb.pchome.com.tw/search/v3.3/all/results"
-    headers = get_headers()
-    products = []
-    page = 1
+    print(f"🔍 PChome 爬蟲啟動，搜尋關鍵字: {keyword}")
     
-    while True:
-        params = {
-            'q': keyword,
-            'page': page,
-            'sort': 'sale/dc',  # 依銷售量排序
-            'price': f'{min_price}-{max_price}'  # 價格範圍
-        }
-        
-        try:
-            response = requests.get(base_url, params=params, headers=headers, timeout=10)
-            response.raise_for_status()
-            data = response.json()
-            
-            if not data.get('prods'):
-                print(f"第 {page} 頁無數據，停止爬取")
-                break
-            
-            for item in data['prods']:
-                product_info = {
-                    "title": item.get("name", ""),
-                    "price": int(float(item.get("price", 0))),
-                    "image_url": f"https://cs-a.ecimg.tw{item.get('picB', '')}",
-                    "url": f"https://24h.pchome.com.tw/prod/{item.get('Id', '')}",
-                    "platform": "PChome"
-                }
-                products.append(product_info)
-            
-            # 檢查是否達到最大商品數量
-            if len(products) >= max_products:
-                # print(f"已獲取 {len(products)} 個商品，達到最大數量限制")
-                break
-            
-            # 檢查是否還有下一頁
-            if len(data['prods']) < 20:  # PChome每頁通常顯示20個商品
-                print(f"第 {page} 頁僅有 {len(data['prods'])} 個商品，無更多數據")
-                break
-            
-            page += 1
-            time.sleep(1)  # 延遲1秒，防止反爬
-            
-        except requests.RequestException as e:
-            print(f"請求第 {page} 頁失敗: {e}")
-            break
-        except json.JSONDecodeError as e:
-            print(f"解析第 {page} 頁JSON失敗: {e}")
-            break
-    products = products[:max_products]
-    # print(f"獲取到 {len(products)} 個PChome商品")
+    # 使用純 API 方法
+    products = api_method(keyword, max_products, min_price, max_price)
+    
+    print(f"✅ 總共獲取到 {len(products)} 個 PChome 商品")
     return products
 
 def main(keyword: str, output_file: str = None, max_products: int = 100) -> None:
@@ -104,19 +171,28 @@ def main(keyword: str, output_file: str = None, max_products: int = 100) -> None
         "products": products,
         "crawl_time": time.strftime("%Y-%m-%d %H:%M:%S")
     }
+    
     # 保存為JSON文件
     if not output_file:
         os.makedirs("./crawl_data", exist_ok=True)
         output_file = f"./crawl_data/pchome_{keyword}_{uuid.uuid4().hex}.json"
+    
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(output_data, f, ensure_ascii=False, indent=2)
     print(f"結果已保存至 {output_file}")
 
 if __name__ == "__main__":
+    # 測試簡單關鍵字
+    print("🔍 測試 PChome 爬蟲...")
+    result = run("iPhone", max_products=5)
+    print(f"✅ 獲得 {len(result)} 個商品")
     
-    result =  run("球鞋", max_products=10)
+    if result:
+        print("📦 商品範例:")
+        for i, product in enumerate(result[:2]):
+            print(f"   {i+1}. {product['title'][:50]}... - ${product['price']}")
+    
+    # 保存測試結果
     with open("pchome_test.json", "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
-    # result = fetch_products("球鞋", max_products=5)
-    # with open("pchome_test.json", "w", encoding="utf-8") as f:
-    #     json.dump(result, f, ensure_ascii=False, indent=2)
+    print(f"💾 結果已保存至 pchome_test.json")

@@ -22,6 +22,9 @@ def get_headers() -> Dict:
 def run(keyword: str, max_products: int = 100, min_price: int = 0, max_price: int = 999999) -> List[Dict]:
     """
     爬取家樂福線上購物的商品資訊 (根據 2025 年版面更新，支援分頁)
+    
+    注意：本版本使用 requests + BeautifulSoup，輕量級且快速
+    如果此版本因反爬蟲機制失效，可使用 selenium/crawler_carrefour_selenium.py 備用版本
 
     Args:
         keyword (str): 要搜尋的商品關鍵字
