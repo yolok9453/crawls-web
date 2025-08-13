@@ -85,27 +85,35 @@ jobs:
         from selenium.webdriver.chrome.options import Options
         from selenium.webdriver.chrome.service import Service
         import os
+        import warnings
+        warnings.filterwarnings('ignore')
         
         options = Options()
         options.add_argument('--headless')
         options.add_argument('--no-sandbox')
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
+        options.add_argument('--remote-debugging-port=9222')
         
-        # 嘗試使用手動安裝的 ChromeDriver
+        # 優先使用手動安裝的 ChromeDriver
         chromedriver_paths = [
             '/usr/local/bin/chromedriver',
-            '/usr/bin/chromedriver'
+            '/usr/bin/chromedriver',
+            '/snap/bin/chromium.chromedriver'
         ]
         
         success = False
+        working_driver_path = None
+        
         for driver_path in chromedriver_paths:
             if os.path.exists(driver_path):
                 try:
+                    print(f'嘗試使用 ChromeDriver: {driver_path}')
                     service = Service(driver_path)
                     driver = webdriver.Chrome(service=service, options=options)
                     driver.get('https://www.google.com')
                     print(f'✅ ChromeDriver 測試成功 (路徑: {driver_path})')
+                    working_driver_path = driver_path
                     driver.quit()
                     success = True
                     break
@@ -114,22 +122,23 @@ jobs:
                     continue
         
         if not success:
-            # 最後嘗試使用 webdriver-manager
+            # 最後嘗試使用系統 PATH 中的 chromedriver
             try:
-                from webdriver_manager.chrome import ChromeDriverManager
-                driver_path = ChromeDriverManager().install()
-                if os.path.exists(driver_path):
-                    os.chmod(driver_path, 0o755)
-                service = Service(driver_path)
-                driver = webdriver.Chrome(service=service, options=options)
+                print('嘗試使用系統 PATH 中的 ChromeDriver...')
+                driver = webdriver.Chrome(options=options)
                 driver.get('https://www.google.com')
-                print('✅ webdriver-manager ChromeDriver 測試成功')
+                print('✅ 系統 PATH ChromeDriver 測試成功')
+                working_driver_path = 'chromedriver'
                 driver.quit()
                 success = True
             except Exception as e:
-                print(f'❌ webdriver-manager 也失敗: {e}')
+                print(f'❌ 系統 PATH ChromeDriver 失敗: {e}')
         
-        if not success:
+        if success:
+            print(f'設定環境變數 CHROMEDRIVER_PATH={working_driver_path}')
+            with open('/tmp/chromedriver_path.txt', 'w') as f:
+                f.write(working_driver_path)
+        else:
             print('❌ 所有 ChromeDriver 測試都失敗')
             exit(1)
         "
@@ -196,6 +205,16 @@ jobs:
         # 設定環境變數
         os.environ['DISPLAY'] = ':99'
         
+        # 讀取可用的 ChromeDriver 路徑
+        chromedriver_path = None
+        try:
+            with open('/tmp/chromedriver_path.txt', 'r') as f:
+                chromedriver_path = f.read().strip()
+            print(f'使用 ChromeDriver 路徑: {chromedriver_path}')
+            os.environ['CHROMEDRIVER_PATH'] = chromedriver_path
+        except Exception as e:
+            print(f'無法讀取 ChromeDriver 路徑: {e}')
+        
         try:
             from crawler_pchome_onsale import run as run_pchome
             from crawler_yahoo_rushbuy import run as run_yahoo
@@ -226,7 +245,8 @@ jobs:
         print('開始執行 PChome OnSale 爬蟲...')
         pchome_count = 0
         try:
-            pchome_products = run_pchome(keyword='pchome_onsale', max_products=200)  # 恢復原來數量
+            # 降低數量以確保穩定性，但仍有足夠的商品
+            pchome_products = run_pchome(keyword='pchome_onsale', max_products=100)  # 平衡數量和穩定性
             
             if pchome_products:
                 # 將資料存入 SQLite 資料庫
@@ -272,7 +292,8 @@ jobs:
         print('開始執行 Yahoo 秒殺爬蟲...')
         yahoo_count = 0
         try:
-            yahoo_products = run_yahoo(keyword='yahoo_rushbuy', max_products=150)  # 恢復原來數量
+            # 降低數量以確保穩定性，但仍有足夠的商品
+            yahoo_products = run_yahoo(keyword='yahoo_rushbuy', max_products=80)  # 平衡數量和穩定性
             
             if yahoo_products:
                 # 將資料存入 SQLite 資料庫
