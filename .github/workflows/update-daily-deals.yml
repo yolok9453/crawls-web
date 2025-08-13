@@ -54,7 +54,7 @@ jobs:
     - name: Prepare environment and check files
       run: |
         # 創建必要的目錄
-        mkdir -p crawl_data
+        mkdir -p data
         mkdir -p crawl_testdata
         
         # 創建基本的 .env 檔案（不包含敏感資訊）
@@ -76,6 +76,7 @@ jobs:
         import sys
         import os
         sys.path.insert(0, 'crawlers')
+        sys.path.insert(0, 'core')
         try:
             from crawler_pchome_onsale import run as run_pchome
             print('✓ PChome crawler import successful')
@@ -87,6 +88,12 @@ jobs:
             print('✓ Yahoo crawler import successful')
         except Exception as e:
             print(f'✗ Yahoo crawler import failed: {e}')
+            
+        try:
+            from core.database import get_db_connection, init_db
+            print('✓ Database module import successful')
+        except Exception as e:
+            print(f'✗ Database module import failed: {e}')
         "
     
     - name: Run Daily Deals Crawlers (PChome + Yahoo)
@@ -109,8 +116,9 @@ jobs:
         try:
             from crawler_pchome_onsale import run as run_pchome
             from crawler_yahoo_rushbuy import run as run_yahoo
+            from core.database import get_db_connection, init_db
         except ImportError as e:
-            print(f'匯入爬蟲模組失敗: {e}')
+            print(f'匯入模組失敗: {e}')
             print('可用的檔案:')
             for root, dirs, files in os.walk('crawlers'):
                 for file in files:
@@ -118,51 +126,58 @@ jobs:
                         print(f'  {os.path.join(root, file)}')
             sys.exit(1)
         
-        import json
         from datetime import datetime
-        import glob
         
-        # 清理舊檔案（保留固定檔名，刪除所有帶時間戳的檔案）
-        try:
-            old_pchome_files = glob.glob('crawl_data/crawler_results_pchome_onsale_*.json')
-            old_yahoo_files = glob.glob('crawl_data/crawler_results_yahoo_rushbuy_*.json')
-            
-            # 清理所有舊的促銷檔案
-            all_old_files = old_pchome_files + old_yahoo_files
-            for f in all_old_files:
-                try:
-                    os.remove(f)
-                    print(f'已刪除舊檔案: {f}')
-                except Exception as e:
-                    print(f'刪除檔案失敗 {f}: {e}')
-        except Exception as e:
-            print(f'清理檔案時發生錯誤: {e}')
-        
-        os.makedirs('crawl_data', exist_ok=True)
+        # 確保目錄存在
+        os.makedirs('data', exist_ok=True)
         os.makedirs('crawl_testdata', exist_ok=True)
+        
+        # 初始化資料庫
+        print('初始化資料庫...')
+        init_db()
+        
         current_time = datetime.now()
+        total_saved = 0
         
         # 執行 PChome OnSale 爬蟲
         print('開始執行 PChome OnSale 爬蟲...')
-        pchome_products = []
+        pchome_count = 0
         try:
             pchome_products = run_pchome(keyword='pchome_onsale', max_products=200)  # 降低數量
             
             if pchome_products:
-                # 保存 PChome 結果（固定檔名）
-                pchome_data = {
-                    'timestamp': current_time.isoformat(),
-                    'platform': 'pchome_onsale',
-                    'keyword': 'pchome_onsale',
-                    'total_products': len(pchome_products),
-                    'products': pchome_products,
-                    'crawl_time': current_time.strftime('%Y-%m-%d %H:%M:%S')
-                }
+                # 將資料存入 SQLite 資料庫
+                conn = get_db_connection()
+                cursor = conn.cursor()
                 
-                with open('crawl_data/crawler_results_pchome_onsale.json', 'w', encoding='utf-8') as f:
-                    json.dump(pchome_data, f, ensure_ascii=False, indent=2)
+                # 清除舊的 PChome OnSale 資料
+                cursor.execute('DELETE FROM daily_deals WHERE platform = ?', ('pchome_onsale',))
                 
-                print(f'PChome 爬蟲執行完成！獲取 {len(pchome_products)} 個商品')
+                # 插入新資料
+                for product in pchome_products:
+                    try:
+                        cursor.execute('''
+                            INSERT INTO daily_deals 
+                            (title, price, original_price, discount_percent, url, image_url, platform, crawl_time)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        ''', (
+                            product.get('title', ''),
+                            product.get('price', 0),
+                            product.get('original_price', 0),
+                            product.get('discount_percent', 0),
+                            product.get('url', ''),
+                            product.get('image_url', ''),
+                            'pchome_onsale',
+                            current_time.isoformat()
+                        ))
+                        pchome_count += 1
+                    except Exception as e:
+                        print(f'插入 PChome 商品時發生錯誤: {e}')
+                        continue
+                
+                conn.commit()
+                conn.close()
+                print(f'PChome 爬蟲執行完成！獲取並儲存 {pchome_count} 個商品到資料庫')
             else:
                 print('PChome 爬蟲沒有獲取到商品，可能是網站結構變更')
         except Exception as e:
@@ -172,25 +187,43 @@ jobs:
         
         # 執行 Yahoo 秒殺爬蟲
         print('開始執行 Yahoo 秒殺爬蟲...')
-        yahoo_products = []
+        yahoo_count = 0
         try:
             yahoo_products = run_yahoo(keyword='yahoo_rushbuy', max_products=150)  # 降低數量
             
             if yahoo_products:
-                # 保存 Yahoo 結果（固定檔名）
-                yahoo_data = {
-                    'timestamp': current_time.isoformat(),
-                    'platform': 'yahoo_rushbuy',
-                    'keyword': 'yahoo_rushbuy',
-                    'total_products': len(yahoo_products),
-                    'products': yahoo_products,
-                    'crawl_time': current_time.strftime('%Y-%m-%d %H:%M:%S')
-                }
+                # 將資料存入 SQLite 資料庫
+                conn = get_db_connection()
+                cursor = conn.cursor()
                 
-                with open('crawl_data/crawler_results_yahoo_rushbuy.json', 'w', encoding='utf-8') as f:
-                    json.dump(yahoo_data, f, ensure_ascii=False, indent=2)
+                # 清除舊的 Yahoo 秒殺資料
+                cursor.execute('DELETE FROM daily_deals WHERE platform = ?', ('yahoo_rushbuy',))
                 
-                print(f'Yahoo 爬蟲執行完成！獲取 {len(yahoo_products)} 個商品')
+                # 插入新資料
+                for product in yahoo_products:
+                    try:
+                        cursor.execute('''
+                            INSERT INTO daily_deals 
+                            (title, price, original_price, discount_percent, url, image_url, platform, crawl_time)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        ''', (
+                            product.get('title', ''),
+                            product.get('price', 0),
+                            product.get('original_price', 0),
+                            product.get('discount_percent', 0),
+                            product.get('url', ''),
+                            product.get('image_url', ''),
+                            'yahoo_rushbuy',
+                            current_time.isoformat()
+                        ))
+                        yahoo_count += 1
+                    except Exception as e:
+                        print(f'插入 Yahoo 商品時發生錯誤: {e}')
+                        continue
+                
+                conn.commit()
+                conn.close()
+                print(f'Yahoo 爬蟲執行完成！獲取並儲存 {yahoo_count} 個商品到資料庫')
             else:
                 print('Yahoo 爬蟲沒有獲取到商品，可能是網站結構變更')
         except Exception as e:
@@ -198,14 +231,15 @@ jobs:
             import traceback
             traceback.print_exc()
         
-        print(f'全部爬蟲執行完成！PChome: {len(pchome_products)}個, Yahoo: {len(yahoo_products)}個商品')
+        total_saved = pchome_count + yahoo_count
+        print(f'全部爬蟲執行完成！PChome: {pchome_count}個, Yahoo: {yahoo_count}個，總共儲存 {total_saved} 個商品到資料庫')
         
         # 即使有部分失敗，只要有任一爬蟲成功就算成功
-        if len(pchome_products) == 0 and len(yahoo_products) == 0:
-            print('所有爬蟲都失敗了')
+        if total_saved == 0:
+            print('所有爬蟲都失敗了，沒有儲存任何商品')
             sys.exit(1)
         else:
-            print('至少有一個爬蟲成功執行')
+            print(f'成功儲存 {total_saved} 個商品到資料庫')
         "
     
     - name: Configure Git
@@ -215,14 +249,14 @@ jobs:
     
     - name: Commit and push changes
       run: |
-        # 檢查是否有檔案需要提交
-        git add crawl_data/ || true
+        # 檢查是否有檔案需要提交（資料庫檔案）
+        git add data/crawler_data.db || true
         
         # 檢查是否有變更
         if git diff --staged --quiet; then
           echo "No changes to commit"
         else
           echo "Found changes, committing..."
-          git commit -m "Auto update daily deals (PChome + Yahoo) - $(date '+%Y-%m-%d %H:%M:%S UTC')" || true
+          git commit -m "Auto update daily deals database (PChome + Yahoo) - $(date '+%Y-%m-%d %H:%M:%S UTC')" || true
           git push || echo "Push failed, but continuing..."
         fi

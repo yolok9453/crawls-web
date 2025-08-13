@@ -21,6 +21,14 @@ if os.path.exists(config_path):
 # 啟動Flask應用
 if __name__ == '__main__':
     try:
+        # 自動同步 GitHub 資料庫
+        print("🔄 檢查資料庫更新...")
+        try:
+            from core.github_sync import auto_sync_if_needed
+            auto_sync_if_needed(max_age_hours=2)  # 如果超過2小時沒更新就同步
+        except Exception as e:
+            print(f"⚠️ 資料庫同步檢查失敗，將使用本地資料庫: {e}")
+        
         # 導入並啟動web應用
         from app.web_app import app, init_db
         
@@ -29,6 +37,7 @@ if __name__ == '__main__':
         
         print("🚀 爬蟲結果展示網站啟動中...")
         print("📁 請訪問: http://localhost:5000")
+        print("💡 提示: 網站會自動從 GitHub 同步最新的促銷資料")
         print("⏹️  按 Ctrl+C 停止伺服器")
         
         # 解決 UWSGI 連接問題
