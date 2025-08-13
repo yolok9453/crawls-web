@@ -49,15 +49,42 @@ jobs:
         sudo Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
         export DISPLAY=:99
         
-        # 安裝 ChromeDriver (使用 webdriver-manager)
+        # 安裝 ChromeDriver (使用多種方法確保成功)
         pip install webdriver-manager
+        
+        # 嘗試手動安裝 ChromeDriver
+        echo "嘗試安裝 ChromeDriver..."
+        
+        # 方法1: 使用 apt 安裝 chromium-chromedriver
+        sudo apt-get install -y chromium-chromedriver || true
+        
+        # 方法2: 手動下載最新版本
+        echo "手動下載 ChromeDriver..."
+        
+        # 獲取 Chrome 主版本號
+        CHROME_MAJOR_VERSION=$(google-chrome --version | grep -oP '\d+' | head -1)
+        echo "Chrome 主版本: $CHROME_MAJOR_VERSION"
+        
+        # 下載最新的 ChromeDriver
+        LATEST_VERSION=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_$CHROME_MAJOR_VERSION")
+        echo "下載 ChromeDriver 版本: $LATEST_VERSION"
+        
+        if [ ! -z "$LATEST_VERSION" ]; then
+            wget -O /tmp/chromedriver.zip "https://storage.googleapis.com/chrome-for-testing-public/$LATEST_VERSION/linux64/chromedriver-linux64.zip"
+            unzip /tmp/chromedriver.zip -d /tmp/
+            sudo mv /tmp/chromedriver-linux64/chromedriver /usr/local/bin/chromedriver
+            sudo chmod +x /usr/local/bin/chromedriver
+            echo "ChromeDriver 安裝完成"
+        else
+            echo "無法取得 ChromeDriver 版本，使用系統預設"
+        fi
         
         # 驗證 ChromeDriver 可以正常工作
         python -c "
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
-        from webdriver_manager.chrome import ChromeDriverManager
         from selenium.webdriver.chrome.service import Service
+        import os
         
         options = Options()
         options.add_argument('--headless')
@@ -65,14 +92,45 @@ jobs:
         options.add_argument('--disable-dev-shm-usage')
         options.add_argument('--disable-gpu')
         
-        try:
-            service = Service(ChromeDriverManager().install())
-            driver = webdriver.Chrome(service=service, options=options)
-            driver.get('https://www.google.com')
-            print('✅ ChromeDriver 測試成功')
-            driver.quit()
-        except Exception as e:
-            print(f'❌ ChromeDriver 測試失敗: {e}')
+        # 嘗試使用手動安裝的 ChromeDriver
+        chromedriver_paths = [
+            '/usr/local/bin/chromedriver',
+            '/usr/bin/chromedriver'
+        ]
+        
+        success = False
+        for driver_path in chromedriver_paths:
+            if os.path.exists(driver_path):
+                try:
+                    service = Service(driver_path)
+                    driver = webdriver.Chrome(service=service, options=options)
+                    driver.get('https://www.google.com')
+                    print(f'✅ ChromeDriver 測試成功 (路徑: {driver_path})')
+                    driver.quit()
+                    success = True
+                    break
+                except Exception as e:
+                    print(f'❌ 路徑 {driver_path} 測試失敗: {e}')
+                    continue
+        
+        if not success:
+            # 最後嘗試使用 webdriver-manager
+            try:
+                from webdriver_manager.chrome import ChromeDriverManager
+                driver_path = ChromeDriverManager().install()
+                if os.path.exists(driver_path):
+                    os.chmod(driver_path, 0o755)
+                service = Service(driver_path)
+                driver = webdriver.Chrome(service=service, options=options)
+                driver.get('https://www.google.com')
+                print('✅ webdriver-manager ChromeDriver 測試成功')
+                driver.quit()
+                success = True
+            except Exception as e:
+                print(f'❌ webdriver-manager 也失敗: {e}')
+        
+        if not success:
+            print('❌ 所有 ChromeDriver 測試都失敗')
             exit(1)
         "
 
