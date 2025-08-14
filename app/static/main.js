@@ -2,28 +2,6 @@
 let allResults = [];
 let filteredResults = [];
 
-// 頁面載入完成後初始化
-document.addEventListener("DOMContentLoaded", function () {
-  console.log("頁面載入完成，開始初始化...");
-  loadResults();
-  loadPlatforms();
-  loadDailyDealsStats(); // 載入每日促銷統計
-  
-  // 添加調試信息
-  setTimeout(() => {
-    console.log("5秒後檢查載入狀態...");
-    const spinner = document.getElementById("loadingSpinner");
-    const table = document.querySelector(".table-responsive");
-    const emptyMessage = document.getElementById("emptyMessage");
-    
-    console.log("載入動畫顯示狀態:", spinner?.style.display);
-    console.log("表格顯示狀態:", table?.style.display);
-    console.log("空訊息顯示狀態:", emptyMessage?.style.display);
-    console.log("所有結果數量:", allResults.length);
-    console.log("過濾結果數量:", filteredResults.length);
-  }, 5000);
-});
-
 // 載入所有結果
 async function loadResults() {
   showLoading(true);
@@ -215,6 +193,9 @@ function applyFilters() {
 
 // 重新整理結果
 function refreshResults() {
+  // 檢查是否需要從GitHub同步新資料
+  checkGitHubSync();
+  
   loadResults();
   loadDailyDealsStats();
 }
@@ -435,3 +416,114 @@ function showAlert(title, message, type = 'info') {
     container.insertAdjacentHTML('afterbegin', alertHtml);
   }
 }
+
+// GitHub資料同步功能
+async function checkGitHubSync() {
+  try {
+    const response = await fetch('/api/check-github-sync');
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      if (data.needs_sync) {
+        showSyncNotification(data.message, data.age_hours);
+      }
+    }
+  } catch (error) {
+    console.log('檢查GitHub同步狀態失敗:', error);
+  }
+}
+
+function showSyncNotification(message, ageHours) {
+  const alertHtml = `
+    <div class="alert alert-warning alert-dismissible fade show" role="alert" id="syncAlert">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h6 class="alert-heading mb-1">📡 資料更新提醒</h6>
+          <p class="mb-0">${message}</p>
+          <small class="text-muted">點擊右側按鈕獲取GitHub上的最新促銷資料</small>
+        </div>
+        <div>
+          <button type="button" class="btn btn-warning btn-sm me-2" onclick="syncGitHubData()">
+            <i class="fas fa-sync-alt me-1"></i>同步最新資料
+          </button>
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  const container = document.querySelector('.container');
+  if (container) {
+    // 移除舊的同步提醒
+    const oldAlert = document.getElementById('syncAlert');
+    if (oldAlert) oldAlert.remove();
+    
+    container.insertAdjacentHTML('afterbegin', alertHtml);
+  }
+}
+
+async function syncGitHubData() {
+  const syncBtn = document.querySelector('#syncAlert button[onclick="syncGitHubData()"]');
+  if (syncBtn) {
+    syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>同步中...';
+    syncBtn.disabled = true;
+  }
+  
+  try {
+    const response = await fetch('/api/sync-github-data', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      showAlert('成功', data.message, 'success');
+      
+      // 移除同步提醒
+      const syncAlert = document.getElementById('syncAlert');
+      if (syncAlert) syncAlert.remove();
+      
+      // 重新載入資料
+      setTimeout(() => {
+        loadResults();
+        loadDailyDealsStats();
+      }, 1000);
+      
+    } else {
+      showAlert('同步失敗', data.message, 'error');
+    }
+    
+  } catch (error) {
+    showAlert('同步錯誤', '無法連接到服務器，請稍後再試', 'error');
+  }
+}
+
+// 添加自動檢查到頁面載入
+document.addEventListener("DOMContentLoaded", function () {
+  console.log("頁面載入完成，開始初始化...");
+  loadResults();
+  loadPlatforms();
+  loadDailyDealsStats();
+  
+  // 檢查是否需要同步GitHub資料
+  setTimeout(() => {
+    checkGitHubSync();
+  }, 2000);
+  
+  // 添加調試信息
+  setTimeout(() => {
+    console.log("5秒後檢查載入狀態...");
+    const spinner = document.getElementById("loadingSpinner");
+    const table = document.querySelector(".table-responsive");
+    const emptyMessage = document.getElementById("emptyMessage");
+    
+    console.log("載入動畫顯示狀態:", spinner?.style.display);
+    console.log("表格顯示狀態:", table?.style.display);
+    console.log("空訊息顯示狀態:", emptyMessage?.style.display);
+    console.log("所有結果數量:", allResults.length);
+    console.log("過濾結果數量:", filteredResults.length);
+  }, 5000);
+});

@@ -19,6 +19,7 @@ sys.path.insert(0, project_root)
 from core.crawler_manager import CrawlerManager
 from core.product_filter import ProductFilter
 from core.database import get_db_connection, init_db
+from core.github_sync import auto_sync_if_needed, download_latest_database
 from core.services.product_comparison_service import ProductComparisonService
 from core.services.daily_deals_service import DailyDealsService
 from core.services.product_comparison_cache_service import ProductComparisonCacheService
@@ -328,6 +329,73 @@ def enrich_product_database():
     """手動豐富商品資料庫 - 爬取熱門關鍵字商品"""
     result = daily_deals_service.enrich_product_database()
     return jsonify(result)
+
+@app.route('/api/sync-github-data', methods=['POST'])
+def sync_github_data():
+    """手動同步GitHub最新資料"""
+    try:
+        print("🔄 開始從GitHub同步最新資料...")
+        
+        # 強制下載最新資料庫
+        success = download_latest_database()
+        
+        if success:
+            # 重新初始化資料庫服務以使用新資料
+            global database_service
+            database_service = DatabaseService()
+            
+            return jsonify({
+                'status': 'success',
+                'message': '✅ 成功從GitHub同步最新資料',
+                'sync_time': datetime.now().isoformat()
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': '❌ GitHub資料同步失敗，請稍後再試'
+            }), 500
+            
+    except Exception as e:
+        print(f"GitHub同步錯誤: {e}")
+        return jsonify({
+            'status': 'error', 
+            'message': f'同步過程發生錯誤: {str(e)}'
+        }), 500
+
+@app.route('/api/check-github-sync', methods=['GET'])
+def check_github_sync():
+    """檢查是否需要從GitHub同步資料"""
+    try:
+        from core.github_sync import check_database_update_time
+        
+        update_time = check_database_update_time()
+        
+        if update_time:
+            # 計算資料庫年齡
+            now = datetime.now()
+            age_hours = (now - update_time).total_seconds() / 3600
+            
+            needs_sync = age_hours > 1  # 如果超過1小時就建議同步
+            
+            return jsonify({
+                'status': 'success',
+                'last_update': update_time.isoformat(),
+                'age_hours': round(age_hours, 2),
+                'needs_sync': needs_sync,
+                'message': f'資料庫最後更新於 {age_hours:.1f} 小時前'
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'needs_sync': True,
+                'message': '本地資料庫不存在，需要同步'
+            })
+            
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'檢查同步狀態失敗: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
     try:
