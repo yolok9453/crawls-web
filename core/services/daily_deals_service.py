@@ -104,7 +104,7 @@ class DailyDealsService:
                     for p in products
                 ]
                 cursor.executemany(
-                    "INSERT INTO daily_deals (platform, title, price, url, image_url, crawl_time) VALUES (?, ?, ?, ?, ?, ?)",
+                    "INSERT OR IGNORE INTO daily_deals (platform, title, price, url, image_url, crawl_time) VALUES (?, ?, ?, ?, ?, ?)",
                     products_to_insert
                 )
                 conn.commit()

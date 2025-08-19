@@ -63,18 +63,28 @@ function updatePlatformDescription(platform) {
 }
 
 // 載入每日促銷資料
-async function loadDailyDeals(platform = 'all') {
+async function loadDailyDeals(platform = 'all', force_sync = false) {
     console.log('載入每日促銷資料，平台:', platform);
     showLoading(true);
     
+    // 顯示同步檢查狀態
+    showSyncStatus('正在檢查GitHub最新資料...', 'info');
+    
     try {
-        const url = `/api/daily-deals${platform !== 'all' ? `?platform=${platform}` : ''}`;
+        const url = `/api/daily-deals${platform !== 'all' ? `?platform=${platform}` : ''}${force_sync ? (platform !== 'all' ? '&' : '?') + 'auto_sync=true' : ''}`;
         console.log('請求 URL:', url);
         
         const response = await fetch(url);
         const data = await response.json();
         
         console.log('API 回應:', data);
+        
+        // 顯示同步結果
+        if (data.sync_performed) {
+            showSyncStatus('✅ 已從GitHub獲取最新資料', 'success');
+        } else {
+            showSyncStatus('📊 使用本地資料（已是最新）', 'info');
+        }
         
         if (data.status === 'success') {
             allDeals = data.daily_deals.map(product => ({
@@ -777,6 +787,82 @@ function applyFilters() {
     currentPage = 1;
     displayProducts();
     setupPagination();
+}
+
+// 顯示同步狀態
+function showSyncStatus(message, type = 'info') {
+    console.log('同步狀態:', message);
+    
+    // 尋找或創建同步狀態元素
+    let syncStatus = document.getElementById('syncStatus');
+    if (!syncStatus) {
+        // 創建同步狀態顯示區域
+        syncStatus = document.createElement('div');
+        syncStatus.id = 'syncStatus';
+        syncStatus.className = 'alert mb-3';
+        
+        // 插入到載入動畫之後
+        const loadingElement = document.getElementById('loading');
+        if (loadingElement && loadingElement.parentNode) {
+            loadingElement.parentNode.insertBefore(syncStatus, loadingElement.nextSibling);
+        } else {
+            // 備用：插入到容器開始處
+            const container = document.querySelector('.container-fluid') || document.querySelector('.container');
+            if (container) {
+                container.insertBefore(syncStatus, container.firstChild);
+            }
+        }
+    }
+    
+    // 設定樣式和內容
+    syncStatus.className = `alert mb-3 alert-${type === 'success' ? 'success' : type === 'error' ? 'danger' : 'info'}`;
+    syncStatus.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} me-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    // 自動隱藏成功訊息
+    if (type === 'success' || type === 'info') {
+        setTimeout(() => {
+            if (syncStatus && syncStatus.parentNode) {
+                syncStatus.style.transition = 'opacity 0.5s';
+                syncStatus.style.opacity = '0';
+                setTimeout(() => {
+                    if (syncStatus && syncStatus.parentNode) {
+                        syncStatus.parentNode.removeChild(syncStatus);
+                    }
+                }, 500);
+            }
+        }, 3000);
+    }
+}
+
+// 強制從GitHub同步最新資料
+async function forceSyncFromGitHub() {
+    console.log('強制從GitHub同步資料');
+    showSyncStatus('🔄 正在強制從GitHub同步最新資料...', 'info');
+    
+    try {
+        const response = await fetch('/api/sync-github-data', {
+            method: 'POST'
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showSyncStatus('✅ 成功從GitHub同步最新資料！', 'success');
+            // 重新載入當前平台的資料
+            setTimeout(() => {
+                loadDailyDeals(currentPlatform, true);
+            }, 1000);
+        } else {
+            showSyncStatus(`❌ 同步失敗: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        console.error('強制同步錯誤:', error);
+        showSyncStatus(`❌ 同步失敗: ${error.message}`, 'error');
+    }
 }
 
 console.log('daily_deals.js 載入完成');

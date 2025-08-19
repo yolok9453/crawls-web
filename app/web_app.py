@@ -139,11 +139,26 @@ def get_result_detail(session_id):
 
 @app.route('/api/daily-deals')
 def get_daily_deals():
-    """從資料庫獲取每日促銷結果"""
+    """從資料庫獲取每日促銷結果，自動檢查GitHub更新"""
     platform_filter = request.args.get('platform', 'all')
+    auto_sync = request.args.get('auto_sync', 'true').lower() == 'true'
+    
     try:
+        # 如果啟用自動同步，先檢查是否需要從GitHub更新資料
+        sync_performed = False
+        if auto_sync:
+            try:
+                # 檢查資料是否需要更新（超過1小時就同步）
+                updated = auto_sync_if_needed(max_age_hours=1)
+                if updated:
+                    sync_performed = True
+                    print("✅ 每日促銷API：已從GitHub同步最新資料")
+            except Exception as sync_error:
+                print(f"⚠️ 每日促銷API：GitHub同步失敗，使用本地資料: {sync_error}")
+        
         result = database_service.get_daily_deals(platform_filter)
         result['status'] = 'success'
+        result['sync_performed'] = sync_performed
         return jsonify(result)
     except Exception as e:
         return jsonify({'error': str(e)}), 500

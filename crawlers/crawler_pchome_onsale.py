@@ -430,7 +430,6 @@ def crawl_pchome_onsale(max_products=None, headless=True, save_json=True, includ
     """
     crawler = PChomeOnsaleCrawler(headless=headless)
     products = crawler.crawl_onsale_products(max_products, include_related, max_related_per_platform)
-    products = products[:16]  # 限制最多返回 16 個商品
     
     # 如果指定要保存 JSON 且有商品資料，則保存
     if save_json and products:
