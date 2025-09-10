@@ -8,6 +8,66 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <style>
+        .daily-deals-card {
+            transition: all 0.3s ease;
+        }
+        .daily-deals-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .home-product-card {
+            border: none;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+        
+        .home-product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .home-product-img {
+            height: 180px;
+            object-fit: cover;
+            width: 100%;
+        }
+        
+        .home-price-badge {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+            color: white;
+            font-weight: bold;
+            font-size: 1.1em;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        
+        .home-platform-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 15px;
+            font-size: 0.8em;
+        }
+        
+        .home-product-title {
+            font-size: 0.9em;
+            line-height: 1.3;
+            height: 3.4em;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-clamp: 2;
+        }
+    </style>
 </head>
 
 <body>
@@ -28,22 +88,8 @@
     <div class="container mt-4">
         <div class="row">
             <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="mb-4">
                     <h1><i class="fas fa-database me-2"></i>爬蟲結果管理</h1>
-                    <div>
-                        <a href="/crawler" class="btn btn-success">
-                            <i class="fas fa-play me-2"></i>執行新爬蟲
-                        </a>
-                        <button class="btn btn-info me-2" onclick="syncGitHubData()" title="從GitHub獲取最新促銷資料">
-                            <i class="fas fa-cloud-download-alt me-2"></i>同步最新資料
-                        </button>
-                        <button class="btn btn-warning me-2" id="batchFilterBtn" onclick="batchFilterResults()">
-                            <i class="fas fa-magic me-2"></i>批量過濾
-                        </button>
-                        <button class="btn btn-outline-primary" onclick="refreshResults()">
-                            <i class="fas fa-sync-alt me-2"></i>重新整理
-                        </button>
-                    </div>
                 </div>                <!-- 統計卡片 -->
                 <div class="row mb-4" id="statsCards">
                     <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
@@ -51,7 +97,7 @@
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h4 class="card-title" id="totalFiles">-</h4>
+                                        <h4 class="card-title" id="totalFiles">{{ sessions|length if sessions else 0 }}</h4>
                                         <p class="card-text">總結果檔案</p>
                                     </div>
                                     <div class="align-self-center">
@@ -66,7 +112,7 @@
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h4 class="card-title" id="totalProducts">-</h4>
+                                        <h4 class="card-title" id="totalProducts">{{ sessions|sum(attribute='total_products') if sessions else 0 }}</h4>
                                         <p class="card-text">總商品數</p>
                                     </div>
                                     <div class="align-self-center">
@@ -81,7 +127,7 @@
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h4 class="card-title" id="totalPlatforms">-</h4>
+                                        <h4 class="card-title" id="totalPlatforms">4</h4>
                                         <p class="card-text">支援平台</p>
                                     </div>
                                     <div class="align-self-center">
@@ -96,7 +142,7 @@
                             <div class="card-body">
                                 <div class="d-flex justify-content-between">
                                     <div>
-                                        <h4 class="card-title" id="latestCrawl">-</h4>
+                                        <h4 class="card-title" id="latestCrawl">{{ sessions[0].crawl_time if sessions else 'N/A' }}</h4>
                                         <p class="card-text">最新爬蟲</p>
                                     </div>
                                     <div class="align-self-center">
@@ -186,12 +232,52 @@
                                         <th>商品數量</th>
                                         <th>平台</th>
                                         <th>爬蟲時間</th>
-                                        <th>檔案大小</th>
+                                        <th>狀態</th>
                                         <th>操作</th>
                                     </tr>
                                 </thead>
                                 <tbody id="resultsTableBody">
-                                    <!-- 動態生成內容 -->
+                                    {% if sessions %}
+                                        {% for session in sessions %}
+                                        <tr>
+                                            <td>{{ session.keyword }}</td>
+                                            <td>{{ session.total_products }}</td>
+                                            <td>{{ session.platforms }}</td>
+                                            <td>{{ session.crawl_time }}</td>
+                                            <td>
+                                                {% if session.status == 'success' %}
+                                                    <span class="badge bg-success">成功</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger">{{ session.status }}</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="action-buttons">
+                                                    <a href="{{ url_for('view_result', session_id=session.id) }}" 
+                                                       class="action-btn view-btn" title="查看結果">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    <button class="action-btn manage-btn" 
+                                                            onclick="manageResult('{{ session.id }}')" title="管理商品">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="action-btn download-btn" 
+                                                            onclick="downloadResult('{{ session.id }}')" title="下載資料">
+                                                        <i class="fas fa-download"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">
+                                                <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                                                目前沒有爬蟲結果<br>
+                                                <a href="/crawler" class="btn btn-primary btn-sm mt-2">執行第一次爬蟲</a>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
                                 </tbody>
                             </table>
                         </div>
@@ -202,6 +288,73 @@
                             <a href="/crawler" class="btn btn-primary">執行第一次爬蟲</a>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 資料庫管理模態框 -->
+    <div class="modal fade" id="databaseModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-database me-2"></i>資料庫管理</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>注意：</strong>以下操作可能會永久刪除資料，請謹慎操作！
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-trash me-2"></i>清理操作</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-warning" onclick="cleanOldSessions(30)">
+                                    <i class="fas fa-calendar-times me-2"></i>清理30天前的資料
+                                </button>
+                                <button class="btn btn-outline-warning" onclick="cleanOldSessions(7)">
+                                    <i class="fas fa-calendar-times me-2"></i>清理7天前的資料
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="cleanEmptySessions()">
+                                    <i class="fas fa-trash me-2"></i>清理空的搜尋結果
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-tools me-2"></i>維護操作</h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-info" onclick="optimizeDatabase()">
+                                    <i class="fas fa-compress-alt me-2"></i>優化資料庫
+                                </button>
+                                <button class="btn btn-outline-success" onclick="backupDatabase()">
+                                    <i class="fas fa-save me-2"></i>備份資料庫
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="getDatabaseStats()">
+                                    <i class="fas fa-info-circle me-2"></i>資料庫統計
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    <div id="databaseStatsResult" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 商品管理模態框 -->
+    <div class="modal fade" id="productModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>商品管理</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="productModalBody">
+                    <!-- 動態生成內容 -->
                 </div>
             </div>
         </div>
@@ -224,6 +377,42 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='main.js') }}"></script>
+    
+    <!-- 直接調試JavaScript -->
+    <script>
+        console.log("=== HTML內嵌JavaScript開始執行 ===");
+        
+        // 等待頁面完全載入後執行
+        window.addEventListener('load', function() {
+            console.log("Window load event fired");
+            
+            // 檢查main.js是否載入
+            if (typeof loadResults === 'function') {
+                console.log("loadResults函數存在，立即調用");
+                loadResults();
+            } else {
+                console.error("loadResults函數不存在！");
+                
+                // 手動測試API
+                fetch('/api/results')
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("手動API測試成功:", data);
+                        if (data.status === 'success' && data.files) {
+                            alert(`手動測試：找到 ${data.files.length} 個爬蟲結果`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error("手動API測試失敗:", error);
+                    });
+            }
+        });
+        
+        // 也試試DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("DOMContentLoaded fired in HTML");
+        });
+    </script>
 </body>
 
 </html>

@@ -7,7 +7,57 @@
     <title>執行爬蟲 - 爬蟲結果展示系統</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='style.css') }}?v={{ range(1000, 9999) | random }}" rel="stylesheet">
+    <style>
+        /* 強制價格樣式優化 */
+        .product-price {
+            background: linear-gradient(135deg, #e74c3c, #dc3545, #c0392b) !important;
+            -webkit-background-clip: text !important;
+            background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            background-size: 200% 200% !important;
+            animation: priceGradient 3s ease infinite !important;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif !important;
+            display: inline-block !important;
+            font-size: 1.4rem !important;
+            font-weight: 700 !important;
+            margin-bottom: 1rem !important;
+            letter-spacing: -0.3px !important;
+            color: transparent !important;
+        }
+        
+        @keyframes priceGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* 如果瀏覽器不支援背景裁剪，使用後備樣式 */
+        @supports not (-webkit-background-clip: text) {
+            .product-price {
+                color: #e74c3c !important;
+                background: none !important;
+                -webkit-text-fill-color: initial !important;
+            }
+        }
+        
+        /* 商品標題優化 */
+        .product-title {
+            font-size: 1rem !important;
+            line-height: 1.35 !important;
+            height: 3.1rem !important;
+            overflow: hidden !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            margin-bottom: 0.75rem !important;
+            font-weight: 600 !important;
+            color: #2c3e50 !important;
+            word-wrap: break-word !important;
+            word-break: break-word !important;
+            text-align: left !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -102,34 +152,95 @@
                 <!-- 結果顯示 -->
                 <div class="card mt-4" id="resultCard" style="display: none;">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5><i class="fas fa-check-circle text-success me-2"></i>爬蟲完成</h5>
-                        <button class="btn btn-outline-primary btn-sm" onclick="viewDetailedResults()">
-                            <i class="fas fa-eye me-2"></i>查看詳細結果
-                        </button>
+                        <h5><i class="fas fa-search me-2"></i><span id="searchKeywordTitle">搜尋結果</span></h5>
+                        <div>
+                            <button class="btn btn-outline-success btn-sm me-2" onclick="exportResults()">
+                                <i class="fas fa-download me-1"></i>匯出結果
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm" onclick="viewDetailedResults()">
+                                <i class="fas fa-eye me-2"></i>返回
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
-                        <div class="row" id="resultSummary">
+                        <!-- 摘要統計卡片 -->
+                        <div class="row mb-4" id="resultSummary">
                             <!-- 動態生成結果摘要 -->
                         </div>
 
-                        <div class="mt-3">
-                            <h6>各平台結果:</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm">
-                                    <thead>
-                                        <tr>
-                                            <th>平台</th>
-                                            <th>狀態</th>
-                                            <th>商品數量</th>
-                                            <th>執行時間</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="platformResultsTable">
-                                        <!-- 動態生成平台結果 -->
-                                    </tbody>
-                                </table>
+                        <!-- 篩選和排序控制 -->
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label for="platformFilter" class="form-label">篩選平台</label>
+                                <select class="form-select" id="platformFilter" onchange="filterAndSortProducts()">
+                                    <option value="all">全部平台</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="minPriceFilter" class="form-label">最低價格</label>
+                                <input type="number" class="form-control" id="minPriceFilter" placeholder="最低價格" onchange="filterAndSortProducts()">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="maxPriceFilter" class="form-label">最高價格</label>
+                                <input type="number" class="form-control" id="maxPriceFilter" placeholder="最高價格" onchange="filterAndSortProducts()">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="sortSelect" class="form-label">排序方式</label>
+                                <select class="form-select" id="sortSelect" onchange="filterAndSortProducts()">
+                                    <option value="price-asc">價格由低到高</option>
+                                    <option value="price-desc">價格由高到低</option>
+                                    <option value="name-asc">商品名稱 A-Z</option>
+                                    <option value="name-desc">商品名稱 Z-A</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">顯示方式</label>
+                                <div class="btn-group w-100" role="group">
+                                    <button type="button" class="btn btn-outline-primary active" id="cardViewBtn" onclick="switchView('card')">
+                                        <i class="fas fa-th"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" id="listViewBtn" onclick="switchView('list')">
+                                        <i class="fas fa-list"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
+
+                        <!-- 商品顯示區域 -->
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0">商品列表</h6>
+                            <span class="text-muted" id="productCount">顯示 1-12 個商品，共 0 個</span>
+                        </div>
+
+                        <!-- 卡片視圖 -->
+                        <div id="cardView" class="row">
+                            <!-- 商品卡片將動態生成 -->
+                        </div>
+
+                        <!-- 列表視圖 -->
+                        <div id="listView" class="table-responsive" style="display: none;">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>圖片</th>
+                                        <th>商品名稱</th>
+                                        <th>價格</th>
+                                        <th>平台</th>
+                                        <th>連結</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productTableBody">
+                                    <!-- 商品列表將動態生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- 分頁控制 -->
+                        <nav aria-label="商品分頁" class="mt-4">
+                            <ul class="pagination justify-content-center" id="pagination">
+                                <!-- 分頁按鈕將動態生成 -->
+                            </ul>
+                        </nav>
                     </div>
                 </div>
             </div>
@@ -157,13 +268,51 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='crawler_fixed.js') }}"></script>
+    <script src="{{ url_for('static', filename='crawler.js') }}?v=20250822001"></script>
     
     <script>
+        // 強制載入平台列表的備用方案
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("頁面載入完成，檢查平台列表...");
+            
+            // 等待一秒後檢查平台是否已載入
+            setTimeout(function() {
+                const platformsList = document.getElementById("platformsList");
+                if (!platformsList || platformsList.innerHTML.trim() === "") {
+                    console.log("平台列表為空，手動載入...");
+                    
+                    // 手動創建平台選項
+                    const platforms = [
+                        {id: 'pchome', name: 'PChome'},
+                        {id: 'yahoo', name: 'Yahoo購物'},
+                        {id: 'carrefour', name: '家樂福'},
+                        {id: 'routn', name: '露天拍賣'}
+                    ];
+                    
+                    platformsList.innerHTML = "";
+                    
+                    platforms.forEach(function(platform) {
+                        const div = document.createElement("div");
+                        div.className = "form-check";
+                        div.innerHTML = `
+                            <input class="form-check-input platform-checkbox" type="checkbox" 
+                                   value="${platform.id}" id="platform_${platform.id}" checked>
+                            <label class="form-check-label" for="platform_${platform.id}">
+                                <i class="fas fa-shopping-cart me-2"></i>
+                                ${platform.name}
+                            </label>
+                        `;
+                        platformsList.appendChild(div);
+                    });
+                    
+                    console.log("手動載入平台選項完成");
+                }
+            }, 1000);
+        });
+        
         // 添加全局錯誤處理
         window.addEventListener('error', function(e) {
             console.error('全局JS錯誤:', e.message, '在', e.filename, '行', e.lineno);
-            alert('發生JavaScript錯誤: ' + e.message);
         });
     </script>
 </body>

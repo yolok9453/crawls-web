@@ -220,8 +220,10 @@ class CrawlerManager:
                             
                     url = p.get('url')
                     if not url:
+                        print(f"跳過沒有URL的商品: {title}")
                         continue  # 跳過沒有URL的商品
                         
+                    print(f"準備插入商品: {title[:30]}... (平台: {platform}, 價格: {price})")
                     products_to_insert.append((
                         session_id,
                         platform,

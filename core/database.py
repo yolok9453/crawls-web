@@ -57,9 +57,10 @@ def create_tables(cursor):
         platform TEXT NOT NULL,
         title TEXT NOT NULL,
         price INTEGER,
-        url TEXT UNIQUE,
+        url TEXT NOT NULL,
         image_url TEXT,
         is_filtered_out BOOLEAN DEFAULT 0,
+        UNIQUE(session_id, url),
         FOREIGN KEY (session_id) REFERENCES crawl_sessions (id)
     );
     """)

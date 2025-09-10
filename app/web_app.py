@@ -92,7 +92,16 @@ crawler_status = daily_deals_service.get_status()
 # --- Web Routes ---
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # 直接在服務器端獲取數據並傳給模板
+    try:
+        sessions = database_service.get_crawl_sessions()
+        print(f"🔍 首頁載入: 找到 {len(sessions)} 個會話")
+        if sessions:
+            print(f"最新會話: {sessions[0]['keyword']} - {sessions[0]['total_products']} 個商品")
+        return render_template('index.html', sessions=sessions)
+    except Exception as e:
+        print(f"獲取會話數據錯誤: {e}")
+        return render_template('index.html', sessions=[])
 
 @app.route('/crawler')
 def crawler_page():
@@ -102,9 +111,19 @@ def crawler_page():
 def daily_deals_page():
     return render_template('daily_deals.html')
 
+@app.route('/test')
+def test_api_page():
+    return render_template('test_api.html')
+
+@app.route('/test-api-detail')
+def test_api_detail():
+    return render_template('test_api_detail.html')
+
 @app.route('/view/<int:session_id>')
 def view_result(session_id):
-    return render_template('result_detail_fixed.html', session_id=session_id)
+    """詳情頁面"""
+    print(f"🔍 詳情頁請求: session_id={session_id}")
+    return render_template('result_detail_simple.html', session_id=session_id)
 
 
 
@@ -115,6 +134,69 @@ def get_crawlers():
         'crawlers': crawler_manager.list_crawlers(),
         'status': 'success'
     })
+
+@app.route('/api/crawl', methods=['POST'])
+def start_crawl():
+    """執行爬蟲任務"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': '無效的請求資料'}), 400
+        
+        keyword = data.get('keyword', '').strip()
+        if not keyword:
+            return jsonify({'error': '請輸入關鍵字'}), 400
+        
+        platforms = data.get('platforms', [])
+        if not platforms:
+            return jsonify({'error': '請選擇至少一個平台'}), 400
+        
+        max_products = data.get('max_products', 100)
+        min_price = data.get('min_price', 0)
+        max_price = data.get('max_price', 999999)
+        
+        # 執行爬蟲
+        session_id = crawler_manager.run_all_crawlers(
+            keyword=keyword,
+            max_products=max_products,
+            min_price=min_price,
+            max_price=max_price,
+            platforms=platforms
+        )
+        
+        # 獲取商品詳情
+        conn = get_db_connection()
+        products = conn.execute('SELECT * FROM products WHERE session_id = ? ORDER BY price', (session_id,)).fetchall()
+        session = conn.execute('SELECT * FROM crawl_sessions WHERE id = ?', (session_id,)).fetchone()
+        
+        # 按平台組織結果，匹配前端期望的格式
+        results = {}
+        for platform in platforms:
+            platform_products = [dict(p) for p in products if p['platform'] == platform]
+            
+            results[platform] = {
+                'status': 'success' if platform_products else 'failed',
+                'total_products': len(platform_products),
+                'products': platform_products,
+                'execution_time': 0  # 這裡可以從其他地方獲取，暫時設為0
+            }
+        
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'session_id': session_id,
+            'results': results,
+            'filename': f'crawler_results_{keyword}_{session_id}.json',
+            'message': f'成功爬取了 {len(platforms)} 個平台的商品'
+        })
+        
+    except Exception as e:
+        print(f"爬蟲API錯誤: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'爬蟲執行失敗: {str(e)}'}), 500
 
 @app.route('/api/results')
 def get_results():
@@ -130,11 +212,63 @@ def get_results():
 
 @app.route('/api/result/<int:session_id>')
 def get_result_detail(session_id):
-    """從資料庫獲取特定任務的詳細內容"""
+    """從資料庫獲取特定任務的詳細內容，包含商品列表"""
     try:
+        print(f"🔍 API 詳情請求: session_id={session_id}")
+        
+        # 獲取統計信息
         stats = database_service.get_session_detail(session_id)
-        return jsonify({'statistics': stats, 'status': 'success'})
+        print(f"📊 統計信息: {stats}")
+        
+        # 獲取商品列表
+        conn = get_db_connection()
+        products = conn.execute('SELECT * FROM products WHERE session_id = ? ORDER BY price', (session_id,)).fetchall()
+        print(f"🛍️ 找到 {len(products)} 個商品")
+        
+        # 組織成前端期望的格式
+        results = {}
+        all_platforms = set()
+        all_products_list = []  # 收集所有商品到一個列表
+        
+        for product in products:
+            platform = product['platform']
+            all_platforms.add(platform)
+            all_products_list.append(dict(product))  # 添加到統一商品列表
+            
+            if platform not in results:
+                results[platform] = {
+                    'status': 'success',
+                    'total_products': 0,
+                    'products': [],
+                    'execution_time': 0
+                }
+            
+            results[platform]['products'].append(dict(product))
+            results[platform]['total_products'] += 1
+        
+        conn.close()
+        
+        # 返回前端期望的格式
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'session': {
+                    'id': session_id,
+                    'keyword': stats.get('keyword', ''),
+                    'total_products': len(all_products_list),
+                    'platforms': list(all_platforms)
+                },
+                'products': all_products_list
+            },
+            'results': results,  # 保留原有格式以防其他地方需要
+            'statistics': stats,
+            'filename': f'crawler_results_session_{session_id}.json',
+            'message': f'載入會話 {session_id} 的結果，共 {len(products)} 個商品'
+        })
     except Exception as e:
+        print(f"獲取會話詳情錯誤: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e), 'status': 'error'}), 500
 
 @app.route('/api/daily-deals')
@@ -411,6 +545,253 @@ def check_github_sync():
             'status': 'error',
             'message': f'檢查同步狀態失敗: {str(e)}'
         }), 500
+
+# ===== 新增的資料庫管理 API =====
+
+@app.route('/api/session/<int:session_id>', methods=['DELETE'])
+def delete_session(session_id):
+    """刪除指定的搜尋會話及其所有商品"""
+    try:
+        conn = get_db_connection()
+        
+        # 獲取會話信息（用於返回訊息）
+        session = conn.execute('SELECT keyword FROM crawl_sessions WHERE id = ?', (session_id,)).fetchone()
+        if not session:
+            conn.close()
+            return jsonify({'status': 'error', 'error': '找不到指定的會話'}), 404
+        
+        keyword = session['keyword']
+        
+        # 計算要刪除的商品數量
+        product_count = conn.execute('SELECT COUNT(*) as count FROM products WHERE session_id = ?', (session_id,)).fetchone()['count']
+        
+        # 刪除商品
+        conn.execute('DELETE FROM products WHERE session_id = ?', (session_id,))
+        
+        # 刪除會話
+        conn.execute('DELETE FROM crawl_sessions WHERE id = ?', (session_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'已刪除關鍵字「{keyword}」的搜尋結果，共清理了 {product_count} 個商品'
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+@app.route('/api/database/clean/<int:days>', methods=['POST'])
+def clean_old_sessions(days):
+    """清理指定天數前的舊資料"""
+    try:
+        conn = get_db_connection()
+        
+        # 計算日期 (DATETIME 格式)
+        cutoff_date = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        cutoff_date = cutoff_date.replace(day=cutoff_date.day - days)
+        cutoff_str = cutoff_date.strftime('%Y-%m-%d %H:%M:%S')
+        
+        # 獲取要刪除的會話
+        old_sessions = conn.execute('SELECT id FROM crawl_sessions WHERE crawl_time < ?', (cutoff_str,)).fetchall()
+        session_ids = [s['id'] for s in old_sessions]
+        
+        if not session_ids:
+            conn.close()
+            return jsonify({
+                'status': 'success',
+                'deleted_sessions': 0,
+                'deleted_products': 0,
+                'message': f'沒有找到 {days} 天前的資料'
+            })
+        
+        # 計算要刪除的商品數量
+        placeholders = ','.join('?' * len(session_ids))
+        product_count = conn.execute(f'SELECT COUNT(*) as count FROM products WHERE session_id IN ({placeholders})', session_ids).fetchone()['count']
+        
+        # 刪除商品
+        conn.execute(f'DELETE FROM products WHERE session_id IN ({placeholders})', session_ids)
+        
+        # 刪除會話
+        conn.execute(f'DELETE FROM crawl_sessions WHERE id IN ({placeholders})', session_ids)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'deleted_sessions': len(session_ids),
+            'deleted_products': product_count,
+            'message': f'成功清理了 {days} 天前的資料'
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+@app.route('/api/database/clean-empty', methods=['POST'])
+def clean_empty_sessions():
+    """清理沒有商品的空會話"""
+    try:
+        conn = get_db_connection()
+        
+        # 找到沒有商品的會話
+        empty_sessions = conn.execute('''
+            SELECT cs.id, cs.keyword 
+            FROM crawl_sessions cs 
+            LEFT JOIN products p ON cs.id = p.session_id 
+            WHERE p.session_id IS NULL
+        ''').fetchall()
+        
+        if not empty_sessions:
+            conn.close()
+            return jsonify({
+                'status': 'success',
+                'deleted_sessions': 0,
+                'message': '沒有找到空的搜尋會話'
+            })
+        
+        # 刪除空會話
+        session_ids = [s['id'] for s in empty_sessions]
+        placeholders = ','.join('?' * len(session_ids))
+        conn.execute(f'DELETE FROM crawl_sessions WHERE id IN ({placeholders})', session_ids)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'deleted_sessions': len(session_ids),
+            'message': f'成功清理了 {len(session_ids)} 個空的搜尋會話'
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+@app.route('/api/database/optimize', methods=['POST'])
+def optimize_database():
+    """優化資料庫，重建索引和壓縮檔案"""
+    try:
+        conn = get_db_connection()
+        
+        # 執行 VACUUM 來壓縮資料庫
+        conn.execute('VACUUM')
+        
+        # 重建索引（如果有的話）
+        conn.execute('REINDEX')
+        
+        # 分析表格以優化查詢計劃
+        conn.execute('ANALYZE')
+        
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'message': '資料庫優化完成，已壓縮檔案並重建索引'
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+@app.route('/api/database/backup', methods=['POST'])
+def backup_database():
+    """建立資料庫備份"""
+    try:
+        import shutil
+        from core.database import DB_PATH
+        
+        # 產生備份檔名
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_filename = f'crawler_data_backup_{timestamp}.db'
+        backup_dir = os.path.join(project_root, 'data')
+        backup_path = os.path.join(backup_dir, backup_filename)
+        
+        # 確保備份目錄存在
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        # 複製資料庫檔案
+        shutil.copy2(DB_PATH, backup_path)
+        
+        return jsonify({
+            'status': 'success',
+            'backup_file': backup_path,
+            'message': f'資料庫備份已建立: {backup_filename}'
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
+
+@app.route('/api/database/stats')
+def get_database_stats():
+    """獲取資料庫統計資訊"""
+    try:
+        conn = get_db_connection()
+        
+        # 基本統計
+        total_sessions = conn.execute('SELECT COUNT(*) as count FROM crawl_sessions').fetchone()['count']
+        total_products = conn.execute('SELECT COUNT(*) as count FROM products').fetchone()['count']
+        empty_sessions = conn.execute('''
+            SELECT COUNT(*) as count 
+            FROM crawl_sessions cs 
+            LEFT JOIN products p ON cs.id = p.session_id 
+            WHERE p.session_id IS NULL
+        ''').fetchone()['count']
+        
+        # 日期範圍
+        date_range = conn.execute('''
+            SELECT 
+                MIN(crawl_time) as oldest,
+                MAX(crawl_time) as newest
+            FROM crawl_sessions
+            WHERE crawl_time IS NOT NULL
+        ''').fetchone()
+        
+        # 資料庫檔案大小
+        from core.database import DB_PATH
+        db_size = 0
+        size_str = "未知"
+        
+        if os.path.exists(DB_PATH):
+            db_size = os.path.getsize(DB_PATH)
+            if db_size > 1024 * 1024:
+                size_str = f"{db_size / (1024 * 1024):.1f} MB"
+            elif db_size > 1024:
+                size_str = f"{db_size / 1024:.1f} KB"
+            else:
+                size_str = f"{db_size} Bytes"
+        
+        # 格式化日期
+        def format_datetime(dt_str):
+            if dt_str:
+                try:
+                    # 如果是 datetime 字符串格式，直接返回
+                    if isinstance(dt_str, str):
+                        return dt_str
+                    # 如果是時間戳，轉換格式
+                    return datetime.fromtimestamp(dt_str).strftime('%Y-%m-%d %H:%M:%S')
+                except:
+                    return "未知"
+            return "無資料"
+        
+        oldest_date = format_datetime(date_range['oldest']) if date_range['oldest'] else "無資料"
+        newest_date = format_datetime(date_range['newest']) if date_range['newest'] else "無資料"
+        
+        conn.close()
+        
+        return jsonify({
+            'status': 'success',
+            'stats': {
+                'total_sessions': total_sessions,
+                'total_products': total_products,
+                'empty_sessions': empty_sessions,
+                'db_size': size_str,
+                'oldest_session_date': oldest_date,
+                'latest_session_date': newest_date
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
 
 if __name__ == '__main__':
     try:

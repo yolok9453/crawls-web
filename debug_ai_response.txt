@@ -1,0 +1,10 @@
+```json
+{"matches": [
+  {"index": 1, "similarity": 0.95, "reason": "完全相同商品，僅價格不同", "confidence": "高", "category": "完全相同"},
+  {"index": 2, "similarity": 0.95, "reason": "商品描述高度相似，都是24入/箱的生茶", "confidence": "高", "category": "完全相同"},
+  {"index": 7, "similarity": 0.80, "reason": "同品牌同系列，但價格不同，且可能含未稅價格", "confidence": "中", "category": "同系列不同價格"},
+  {"index": 8, "similarity": 0.80, "reason": "同品牌同系列，但價格不同，且可能含未稅價格", "confidence": "中", "category": "同系列不同價格"},
+  {"index": 0, "similarity": 0.75, "reason": "同品牌同系列，但數量不同", "confidence": "中", "category": "同系列不同規格"},
+  {"index": 6, "similarity": 0.75, "reason": "同品牌同系列，單瓶販售", "confidence": "中", "category": "同系列不同規格"}
+]}
+```

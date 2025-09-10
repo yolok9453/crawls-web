@@ -541,7 +541,12 @@ function updateModalWithRelatedProducts(originalProduct, relatedProducts, result
         return;
     }
     
-    const relatedHTML = relatedProducts.slice(0, 6).map(product => {
+    // 初始顯示數量和是否展開的狀態
+    const initialDisplayCount = 6;
+    const isExpanded = relatedSection.dataset.expanded === 'true';
+    const displayCount = isExpanded ? relatedProducts.length : Math.min(initialDisplayCount, relatedProducts.length);
+    
+    const relatedHTML = relatedProducts.slice(0, displayCount).map(product => {
         const priceDiff = calculatePriceDifference(originalProduct.price, product.price);
         const similarityBadge = getSimilarityBadge(product.similarity);
         
@@ -593,14 +598,29 @@ function updateModalWithRelatedProducts(originalProduct, relatedProducts, result
         `;
     }).join('');
     
+    // 生成顯示更多/收起按鈕
+    const showMoreButton = relatedProducts.length > initialDisplayCount ? `
+        <div class="text-center mt-3">
+            <button class="btn btn-outline-primary btn-sm" onclick="toggleRelatedProducts(this, ${relatedProducts.length})">
+                <i class="fas fa-${isExpanded ? 'chevron-up' : 'chevron-down'} me-1"></i>
+                ${isExpanded ? `收起 (顯示前${initialDisplayCount}個)` : `顯示更多 (還有${relatedProducts.length - initialDisplayCount}個)`}
+            </button>
+        </div>
+    ` : '';
+    
     relatedSection.innerHTML = `
         <h5><i class="fas fa-layer-group text-success me-2"></i>找到 ${relatedProducts.length} 個相關商品</h5>
         ${stats ? `<small class="text-muted mb-3 d-block">${stats}</small>` : ''}
         <div class="row">
             ${relatedHTML}
         </div>
-        ${relatedProducts.length > 6 ? `<p class="text-muted mt-2">還有 ${relatedProducts.length - 6} 個相關商品未顯示</p>` : ''}
+        ${showMoreButton}
     `;
+    
+    // 儲存相關商品資料到 dataset 供 toggle 函數使用
+    relatedSection.dataset.relatedProducts = JSON.stringify(relatedProducts);
+    relatedSection.dataset.originalProduct = JSON.stringify(originalProduct);
+    relatedSection.dataset.stats = stats || '';
 }
 
 // 計算價格差異
@@ -862,6 +882,34 @@ async function forceSyncFromGitHub() {
     } catch (error) {
         console.error('強制同步錯誤:', error);
         showSyncStatus(`❌ 同步失敗: ${error.message}`, 'error');
+    }
+}
+
+// 切換相關商品顯示/隱藏更多商品
+function toggleRelatedProducts(button, totalCount) {
+    const relatedSection = button.closest('.related-products-section').querySelector('#relatedProductsContainer');
+    const isExpanded = relatedSection.dataset.expanded === 'true';
+    
+    // 切換狀態
+    relatedSection.dataset.expanded = isExpanded ? 'false' : 'true';
+    
+    // 重新渲染相關商品
+    const relatedProducts = JSON.parse(relatedSection.dataset.relatedProducts || '[]');
+    const originalProduct = JSON.parse(relatedSection.dataset.originalProduct || '{}');
+    const stats = relatedSection.dataset.stats || '';
+    
+    if (relatedProducts.length > 0) {
+        displayRelatedProducts(relatedProducts, originalProduct, stats);
+        
+        // 平滑滾動到相關商品區域
+        if (!isExpanded) {
+            setTimeout(() => {
+                relatedSection.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'nearest' 
+                });
+            }, 100);
+        }
     }
 }
 

@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>結果詳情 - 爬蟲結果展示系統</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .badge { font-size: 0.8rem; padding: 0.25em 0.6em; }
+        .platform-carrefour { background-color: #004b9d !important; color: white; }
+        .platform-pchome { background-color: #e53012 !important; color: white; }
+        .platform-routn { background-color: #ff5722 !important; color: white; }
+        .platform-yahoo { background-color: #6001d1 !important; color: white; }
+        
+        /* 整體佈局 */
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #dee2e6 100%);
+            min-height: 100vh;
+            padding: 1rem 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+        }
+        
+        .container {
+            background-color: transparent;
+            border-radius: 0;
+            box-shadow: none;
+            margin-bottom: 2rem;
+            max-width: 1400px;
+        }
+        
+        /* 商品卡片樣式 - 現代化設計 */
+        .product-card {
+            height: 100%;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: none;
+            border-radius: 16px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            position: relative;
+        }
+        
+        .product-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #007bff, #6610f2);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-12px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 123, 255, 0.15), 0 8px 25px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+        }
+        
+        .product-card:hover::before {
+            opacity: 1;
+        }
+        
+        .product-image {
+            height: 240px;
+            object-fit: cover;
+            width: 100%;
+            transition: transform 0.5s ease;
+            border-radius: 16px 16px 0 0;
+        }
+        
+        .product-card:hover .product-image {
+            transform: scale(1.1);
+        }
+        
+        .product-title {
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.4;
+            height: 3.2em;
+            color: #2c3e50;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            margin-bottom: 1rem;
+            letter-spacing: -0.2px;
+        }
+        
+        .product-price {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #e74c3c, #dc3545, #c0392b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% 200%;
+            animation: priceGradient 3s ease infinite;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            margin-bottom: 1rem;
+            display: inline-block;
+            letter-spacing: -0.5px;
+        }
+        
+        .product-platform {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 2;
+        }
+        
+        .btn-view {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            width: 100%;
+        }
+        
+        .btn-view:hover {
+            background: linear-gradient(135deg, #0056b3, #004085);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.4);
+        }
+        
+        .product-col {
+            margin-bottom: 2rem;
+            padding: 0 1rem;
+        }
+        
+        /* 商品網格佈局 - 回到Bootstrap Grid系統 */
+        #products {
+            display: flex;
+            flex-wrap: wrap;
+            margin: -0.75rem;
+        }
+        
+        .product-item {
+            flex: 0 0 25%;
+            max-width: 25%;
+            padding: 0.75rem;
+            box-sizing: border-box;
+        }
+        
+        @media (min-width: 1200px) {
+            .product-item {
+                flex: 0 0 25%;
+                max-width: 25%;
+            }
+        }
+        
+        @media (min-width: 992px) and (max-width: 1199px) {
+            .product-item {
+                flex: 0 0 33.333333%;
+                max-width: 33.333333%;
+            }
+        }
+        
+        @media (min-width: 768px) and (max-width: 991px) {
+            .product-item {
+                flex: 0 0 50%;
+                max-width: 50%;
+            }
+        }
+        
+        /* 價格漸變動畫 */
+        @keyframes priceGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* 平台標籤顏色 - 更精美的漸變 */
+        .platform-pchome {
+            background: linear-gradient(135deg, #ff4757, #ff3838) !important;
+            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4) !important;
+        }
+        
+        .platform-yahoo {
+            background: linear-gradient(135deg, #5f27cd, #341f97) !important;
+            box-shadow: 0 4px 15px rgba(95, 39, 205, 0.4) !important;
+        }
+        
+        .platform-routn {
+            background: linear-gradient(135deg, #ff6b35, #f7931e) !important;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.4) !important;
+        }
+        
+        .platform-carrefour {
+            background: linear-gradient(135deg, #00d2d3, #01a3a4) !important;
+            box-shadow: 0 4px 15px rgba(0, 210, 211, 0.4) !important;
+        }
+        
+        /* 載入動畫 */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+        
+        /* 懸停效果增強 */
+        .product-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(0, 123, 255, 0.1), rgba(102, 16, 242, 0.1));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            border-radius: 16px;
+            pointer-events: none;
+        }
+        
+        .product-card:hover::after {
+            opacity: 1;
+        }
+        
+        /* 按鈕懸停動畫 */
+        .btn-view::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .btn-view:hover::before {
+            left: 100%;
+        }
+        
+        .btn-view {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 統計卡片動畫 */
+        .stats-card {
+            transition: all 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-5px) scale(1.02);
+        }
+        
+        /* 分頁按鈕懸停效果 */
+        .page-link:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.3) !important;
+        }
+        
+        /* 響應式優化 */
+        @media (max-width: 767px) {
+            .product-item {
+                flex: 0 0 100% !important;
+                max-width: 100% !important;
+            }
+            
+            #products {
+                margin: -0.5rem !important;
+            }
+            
+            .product-item {
+                padding: 0.5rem !important;
+            }
+            
+            .product-image {
+                height: 200px;
+            }
+            
+            .product-title {
+                font-size: 0.9rem;
+                height: 2.8rem;
+            }
+            
+            .product-price {
+                font-size: 1.2rem;
+            }
+            
+            .container {
+                padding: 0 1rem;
+            }
+            
+            body {
+                padding: 0.5rem 0;
+            }
+            
+            .product-platform {
+                font-size: 0.7rem;
+                padding: 0.4rem 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-spider me-2"></i>爬蟲結果展示系統
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">首頁</a>
+                <a class="nav-link" href="/crawler">執行爬蟲</a>
+                <a class="nav-link" href="/daily-deals">每日優惠</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4" style="max-width: 1200px; padding: 0 2rem;">
+        <!-- 載入中 -->
+        <div id="loading" class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">載入中...</span>
+            </div>
+            <p class="mt-2">正在載入商品資料...</p>
+        </div>
+
+        <!-- 主要內容 -->
+        <div id="content" style="display: none;">
+            <!-- 專業標題區域 -->
+            <div class="bg-white rounded-4 shadow-sm p-4 mb-4 border-0" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="bg-primary bg-gradient rounded-circle d-flex align-items-center justify-content-center me-3 shadow" style="width: 56px; height: 56px;">
+                                <i class="fas fa-search text-white fs-4"></i>
+                            </div>
+                            <div>
+                                <h1 class="h2 mb-1 text-dark fw-bold" id="title" style="letter-spacing: -0.5px;">搜尋結果詳情</h1>
+                                <p class="text-muted mb-0">專業商品比價分析系統</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <a href="/" class="btn btn-outline-secondary me-2 rounded-pill px-4">
+                            <i class="fas fa-home me-2"></i>首頁
+                        </a>
+                        <button class="btn btn-primary rounded-pill px-4 shadow" onclick="window.history.back()">
+                            <i class="fas fa-arrow-left me-2"></i>返回
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 統計概覽 - 現代化卡片設計 -->
+            <div class="bg-white rounded-4 shadow-sm p-4 mb-4 border-0">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="bg-gradient rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: linear-gradient(135deg, #17a2b8, #138496);">
+                        <i class="fas fa-chart-line text-white"></i>
+                    </div>
+                    <h5 class="mb-0 fw-bold text-dark">數據統計概覽</h5>
+                </div>
+                <div class="row g-4" id="stats">
+                    <!-- 統計數據將由JavaScript填入 -->
+                </div>
+            </div>
+
+            <!-- 篩選與控制 - 美化設計 -->
+            <div class="bg-white rounded-4 shadow-sm p-4 mb-4 border-0">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="bg-gradient rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: linear-gradient(135deg, #6f42c1, #5a2d91);">
+                        <i class="fas fa-filter text-white"></i>
+                    </div>
+                    <h5 class="mb-0 fw-bold text-dark">智能篩選</h5>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark">平台篩選</label>
+                        <select class="form-select border-0 bg-light rounded-pill shadow-sm" id="platformFilter" style="padding: 0.75rem 1.25rem;">
+                            <option value="">全部平台</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark">排序方式</label>
+                        <select class="form-select border-0 bg-light rounded-pill shadow-sm" id="sortSelect" style="padding: 0.75rem 1.25rem;">
+                            <option value="price-asc">價格：低 → 高</option>
+                            <option value="price-desc">價格：高 → 低</option>
+                            <option value="title">商品名稱</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold text-dark">商品統計</label>
+                        <div class="d-flex align-items-center h-100">
+                            <div class="bg-primary bg-gradient rounded-pill px-4 py-2 text-white shadow">
+                                <i class="fas fa-shopping-bag me-2"></i>
+                                <strong id="count">0</strong> 個商品
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 商品展示區域 - 現代化網格設計 -->
+            <div class="bg-white rounded-4 shadow-sm p-4 mb-4 border-0">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-gradient rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; background: linear-gradient(135deg, #28a745, #20c997);">
+                            <i class="fas fa-shopping-bag text-white"></i>
+                        </div>
+                        <h5 class="mb-0 fw-bold text-dark">
+                            商品列表 
+                            <span class="badge bg-primary ms-2 rounded-pill shadow" id="count2" style="font-size: 0.8rem;">0</span>
+                        </h5>
+                    </div>
+                    <div class="text-muted small d-flex align-items-center">
+                        <i class="fas fa-layer-group me-2"></i>
+                        頁面 <span class="fw-bold mx-1" id="currentPageDisplay">1</span> / <span class="fw-bold mx-1" id="totalPagesDisplay">1</span>
+                    </div>
+                </div>
+                
+                <!-- 商品網格 - 使用Flexbox佈局 -->
+                <div id="products">
+                    <!-- 商品卡片將由JavaScript動態生成 -->
+                </div>
+                
+                <!-- 分頁控制 - 美化設計 -->
+                <nav aria-label="商品分頁" class="mt-5">
+                    <ul class="pagination justify-content-center" id="pagination" style="gap: 0.5rem;">
+                        <!-- 分頁按鈕將由JavaScript動態生成 -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let allProducts = [];
+        let filteredProducts = [];
+        let currentPage = 1;
+        let itemsPerPage = 24;
+        
+        // 頁面載入完成立即執行
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('頁面載入完成，開始載入資料...');
+            loadData();
+        });
+        
+        // 載入資料
+        function loadData() {
+            fetch('/api/result/{{ session_id }}')
+                .then(response => {
+                    console.log('API回應狀態:', response.status);
+                    if (!response.ok) {
+                        throw new Error('API請求失敗: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('API資料:', data);
+                    
+                    if (data.status === 'success' && data.data) {
+                        const sessionData = data.data.session;
+                        allProducts = data.data.products || [];
+                        
+                        console.log('載入了', allProducts.length, '個商品');
+                        
+                        // 更新標題
+                        const keyword = sessionData ? sessionData.keyword : '未知';
+                        document.getElementById('title').innerHTML = 
+                            `「${keyword}」商品搜尋結果`;
+                        document.querySelector('h1 + p').textContent = `找到 ${sessionData ? sessionData.total_products : allProducts.length} 個商品，來自 ${sessionData ? sessionData.platforms.join('、') : '多個'} 平台`;
+                        
+                        // 顯示統計
+                        showStats();
+                        
+                        // 更新篩選選項
+                        updateFilters();
+                        
+                        // 顯示商品
+                        filteredProducts = [...allProducts];
+                        showProducts();
+                        
+                        // 設置事件監聽器
+                        setupEvents();
+                        
+                        // 隱藏載入，顯示內容
+                        document.getElementById('loading').style.display = 'none';
+                        document.getElementById('content').style.display = 'block';
+                    } else {
+                        throw new Error('資料格式錯誤');
+                    }
+                })
+                .catch(error => {
+                    console.error('載入失敗:', error);
+                    document.getElementById('loading').innerHTML = 
+                        '<div class="alert alert-danger">載入失敗: ' + error.message + '</div>';
+                });
+        }
+        
+        // 顯示統計
+        function showStats() {
+            const totalProducts = allProducts.length;
+            const platforms = [...new Set(allProducts.map(p => p.platform))];
+            const prices = allProducts.map(p => p.price || 0).filter(p => p > 0);
+            const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
+            const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+            const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+            
+            document.getElementById('stats').innerHTML = `
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="h-100 p-4 rounded-4 shadow-sm border-0" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white;">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <div class="bg-white bg-opacity-20 rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-shopping-cart text-white fs-4"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h3 class="h2 mb-1 fw-bold">${totalProducts.toLocaleString()}</h3>
+                                <p class="mb-0 opacity-85">總商品數</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="h-100 p-4 rounded-4 shadow-sm border-0" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white;">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <div class="bg-white bg-opacity-20 rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-store text-white fs-4"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h3 class="h2 mb-1 fw-bold">${platforms.length}</h3>
+                                <p class="mb-0 opacity-85">購物平台</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="h-100 p-4 rounded-4 shadow-sm border-0" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white;">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <div class="bg-white bg-opacity-20 rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-calculator text-white fs-4"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h3 class="h4 mb-1 fw-bold">NT$ ${Math.round(avgPrice).toLocaleString()}</h3>
+                                <p class="mb-0 opacity-85">平均價格</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="h-100 p-4 rounded-4 shadow-sm border-0" style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); color: white;">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-shrink-0 me-3">
+                                <div class="bg-white bg-opacity-20 rounded-circle d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                    <i class="fas fa-chart-bar text-white fs-4"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h3 class="h6 mb-1 fw-bold">NT$ ${minPrice.toLocaleString()}</h3>
+                                <p class="mb-0 opacity-85 small">最低價格</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 更新篩選器
+        function updateFilters() {
+            const platforms = [...new Set(allProducts.map(p => p.platform))];
+            const platformNames = {
+                'carrefour': '家樂福',
+                'pchome': 'PChome',
+                'routn': '露天',
+                'yahoo': 'Yahoo'
+            };
+            
+            const filterSelect = document.getElementById('platformFilter');
+            filterSelect.innerHTML = '<option value="">全部平台</option>';
+            
+            platforms.forEach(platform => {
+                const option = document.createElement('option');
+                option.value = platform;
+                option.textContent = platformNames[platform] || platform;
+                filterSelect.appendChild(option);
+            });
+        }
+        
+        // 篩選商品
+        function filterProducts() {
+            const selectedPlatform = document.getElementById('platformFilter').value;
+            
+            filteredProducts = allProducts.filter(product => {
+                const platformMatch = !selectedPlatform || product.platform === selectedPlatform;
+                return platformMatch;
+            });
+            
+            currentPage = 1; // 重置到第一頁
+            showProducts();
+        }
+        
+        // 顯示商品
+        function showProducts() {
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageProducts = filteredProducts.slice(startIndex, endIndex);
+            
+            const container = document.getElementById('products');
+            container.innerHTML = '';
+            
+            // 更新商品數量
+            document.getElementById('count').textContent = filteredProducts.length;
+            document.getElementById('count2').textContent = filteredProducts.length;
+            
+            if (pageProducts.length === 0) {
+                container.innerHTML = `
+                    <div style="flex: 0 0 100%; max-width: 100%; text-align: center; padding: 4rem 2rem;">
+                        <div style="max-width: 400px; margin: 0 auto;">
+                            <i class="fas fa-search-minus" style="font-size: 4rem; color: #dee2e6; margin-bottom: 1.5rem;"></i>
+                            <h4 style="color: #6c757d; margin-bottom: 1rem;">沒有找到符合條件的商品</h4>
+                            <p style="color: #adb5bd;">請嘗試調整篩選條件或搜尋其他關鍵字</p>
+                            <button class="btn btn-outline-primary rounded-pill px-4 mt-3" onclick="resetFilters()">
+                                <i class="fas fa-redo me-2"></i>重置篩選
+                            </button>
+                        </div>
+                    </div>
+                `;
+                updatePagination();
+                return;
+            }
+            
+            pageProducts.forEach((product, index) => {
+                const productCard = document.createElement('div');
+                productCard.className = 'product-item';
+                productCard.style.animationDelay = `${index * 0.1}s`;
+                
+                const platformClass = `platform-${product.platform.toLowerCase()}`;
+                const platformNames = {
+                    'carrefour': '家樂福',
+                    'pchome': 'PChome',
+                    'routn': '露天',
+                    'yahoo': 'Yahoo'
+                };
+                const platformName = platformNames[product.platform] || product.platform;
+                const price = product.price || 0;
+                const imageUrl = product.image_url || 'https://via.placeholder.com/280x240/f8f9fa/6c757d?text=暫無圖片';
+                
+                productCard.innerHTML = `
+                    <div class="card product-card h-100 shadow-sm">
+                        <div style="position: relative; overflow: hidden; border-radius: 16px 16px 0 0;">
+                            <span class="product-platform ${platformClass}">
+                                ${platformName}
+                            </span>
+                            <img src="${imageUrl}" 
+                                 class="product-image" 
+                                 alt="${product.title}"
+                                 loading="lazy"
+                                 onerror="this.src='https://via.placeholder.com/280x240/f8f9fa/6c757d?text=載入失敗'">
+                        </div>
+                        <div class="card-body d-flex flex-column p-4">
+                            <h6 class="product-title">${product.title}</h6>
+                            <div class="mt-auto">
+                                <div class="product-price mb-3">NT$ ${price.toLocaleString()}</div>
+                                <div class="d-grid">
+                                    <a href="${product.url}" target="_blank" class="btn btn-view">
+                                        <i class="fas fa-external-link-alt me-2"></i>查看商品
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(productCard);
+            });
+            
+            // 添加動畫效果
+            const productItems = container.querySelectorAll('.product-item');
+            productItems.forEach((item, index) => {
+                item.style.opacity = '0';
+                item.style.transform = 'translateY(30px)';
+                setTimeout(() => {
+                    item.style.transition = 'all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1)';
+                    item.style.opacity = '1';
+                    item.style.transform = 'translateY(0)';
+                }, index * 100);
+            });
+            
+            // 更新分頁
+            updatePagination();
+        }
+        
+        // 更新分頁
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+            const pagination = document.getElementById('pagination');
+            
+            // 更新頁面顯示
+            document.getElementById('currentPageDisplay').textContent = currentPage;
+            document.getElementById('totalPagesDisplay').textContent = totalPages;
+            
+            if (totalPages <= 1) {
+                pagination.innerHTML = '';
+                return;
+            }
+            
+            let paginationHtml = '';
+            
+            // 上一頁
+            if (currentPage > 1) {
+                paginationHtml += `
+                    <li class="page-item">
+                        <a class="page-link rounded-pill me-2 shadow-sm border-0" href="#" onclick="changePage(${currentPage - 1})" style="background: linear-gradient(135deg, #6c757d, #5a6268); color: white; padding: 0.5rem 1rem;">
+                            <i class="fas fa-chevron-left me-1"></i>上一頁
+                        </a>
+                    </li>
+                `;
+            }
+            
+            // 頁碼
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            if (startPage > 1) {
+                paginationHtml += `
+                    <li class="page-item">
+                        <a class="page-link rounded-circle me-2 shadow-sm border-0" href="#" onclick="changePage(1)" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: white; color: #007bff;">1</a>
+                    </li>
+                `;
+                if (startPage > 2) {
+                    paginationHtml += `<li class="page-item disabled me-2"><span class="page-link border-0 bg-transparent">⋯</span></li>`;
+                }
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                if (i === currentPage) {
+                    paginationHtml += `
+                        <li class="page-item active me-2">
+                            <span class="page-link rounded-circle shadow border-0" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #007bff, #0056b3); color: white; font-weight: bold;">${i}</span>
+                        </li>
+                    `;
+                } else {
+                    paginationHtml += `
+                        <li class="page-item me-2">
+                            <a class="page-link rounded-circle shadow-sm border-0" href="#" onclick="changePage(${i})" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: white; color: #007bff; font-weight: 500;">${i}</a>
+                        </li>
+                    `;
+                }
+            }
+            
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationHtml += `<li class="page-item disabled me-2"><span class="page-link border-0 bg-transparent">⋯</span></li>`;
+                }
+                paginationHtml += `
+                    <li class="page-item me-2">
+                        <a class="page-link rounded-circle shadow-sm border-0" href="#" onclick="changePage(${totalPages})" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: white; color: #007bff;">${totalPages}</a>
+                    </li>
+                `;
+            }
+            
+            // 下一頁
+            if (currentPage < totalPages) {
+                paginationHtml += `
+                    <li class="page-item">
+                        <a class="page-link rounded-pill shadow-sm border-0" href="#" onclick="changePage(${currentPage + 1})" style="background: linear-gradient(135deg, #007bff, #0056b3); color: white; padding: 0.5rem 1rem;">
+                            下一頁<i class="fas fa-chevron-right ms-1"></i>
+                        </a>
+                    </li>
+                `;
+            }
+            
+            pagination.innerHTML = paginationHtml;
+        }
+        
+        // 切換頁面
+        function changePage(page) {
+            currentPage = page;
+            showProducts();
+            // 平滑滾動到頂部
+            document.querySelector('.container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        
+        // 重置篩選
+        function resetFilters() {
+            document.getElementById('platformFilter').value = '';
+            document.getElementById('sortSelect').value = 'price-asc';
+            filteredProducts = [...allProducts];
+            // 重新排序
+            filteredProducts.sort((a, b) => (a.price || 0) - (b.price || 0));
+            currentPage = 1;
+            showProducts();
+        }
+        
+        // 設置事件監聽器
+        function setupEvents() {
+            // 平台篩選
+            document.getElementById('platformFilter').addEventListener('change', filterProducts);
+            
+            // 排序
+            document.getElementById('sortSelect').addEventListener('change', function() {
+                const sortType = this.value;
+                switch(sortType) {
+                    case 'price-asc':
+                        filteredProducts.sort((a, b) => (a.price || 0) - (b.price || 0));
+                        break;
+                    case 'price-desc':
+                        filteredProducts.sort((a, b) => (b.price || 0) - (a.price || 0));
+                        break;
+                    case 'title':
+                        filteredProducts.sort((a, b) => a.title.localeCompare(b.title));
+                        break;
+                }
+                currentPage = 1;
+                showProducts();
+            });
+        }
+    </script>
+</body>
+</html>
